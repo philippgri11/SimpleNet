@@ -1,0 +1,14 @@
+numpy~=1.26.1
+pandas~=2.1.2
+jupyter
+torch~=2.1.0
+Pillow~=10.1.0
+torchvision~=0.16.0
+click~=8.1.7
+timm
+scipy
+opencv-python
+scikit-learn
+scikit-image
+tensorboard
+matplotlib

@@ -1,1 +1,9 @@
 __pycache__/*
+
+.idea/
+
+datasets/data/img/
+
+datasets/data/
+
+.DS_Store
