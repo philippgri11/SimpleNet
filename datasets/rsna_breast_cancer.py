@@ -1,4 +1,5 @@
 import os
+from enum import Enum
 
 import pandas as pd
 from torch.utils.data import Dataset
@@ -9,13 +10,20 @@ IMAGENET_MEAN = [0.485]
 IMAGENET_STD = [0.229]
 
 
+class DatasetSplit(Enum):
+    TRAIN = "train"
+    VAL = "val"
+    TEST = "test"
+
+
 class BreastCancerDataset(Dataset):
     def __init__(self, img_dir,
                  meta_data=None,
                  meta_data_csv_path=None,
                  resize=256,
                  imagesize=224,
-                 train_val_split=1.0,
+                 split=DatasetSplit.TRAIN,
+                 train_val_test_split=(0.7, 0.2, 0.1),
                  rotate_degrees=0,
                  translate=0,
                  brightness_factor=0,
@@ -25,7 +33,25 @@ class BreastCancerDataset(Dataset):
                  h_flip_p=0,
                  v_flip_p=0,
                  scale=0):
+        super().__init__()
+        self.img_dir = img_dir
+        self.meta_data = meta_data
+        self.meta_data_csv_path = meta_data_csv_path
+        self.resize = resize
+        self.imagesize = imagesize
+        self.split = split
+        self.train_val_test_split = train_val_test_split
+        self.rotate_degrees = rotate_degrees
+        self.translate = translate
+        self.brightness_factor = brightness_factor
+        self.contrast_factor = contrast_factor
+        self.saturation_factor = saturation_factor
+        self.gray_p = gray_p
+        self.h_flip_p = h_flip_p
+        self.v_flip_p = v_flip_p
+        self.scale = scale
 
+        # Load metadata
         if meta_data is None and meta_data_csv_path is None:
             raise ValueError(
                 "Beide Parameter 'meta_data' und 'meta_data_csv_path' sind nicht definiert. Bitte definieren Sie mindestens einen der beiden.")
@@ -34,7 +60,18 @@ class BreastCancerDataset(Dataset):
             self.metaData = pd.read_csv(meta_data_csv_path)
         else:
             self.metaData = meta_data
-        self.img_dir = img_dir
+
+        n_images = len(self.metaData)
+        train_end = int(n_images * train_val_test_split[0])
+        val_end = train_end + int(n_images * train_val_test_split[1])
+        if self.split == DatasetSplit.TRAIN:
+            self.metaData = self.metaData[:train_end]
+        elif self.split == DatasetSplit.VAL:
+            self.metaData = self.metaData[train_end:val_end]
+        elif self.split == DatasetSplit.TEST:
+            self.metaData = self.metaData[val_end:]
+
+        # Define the transformations
         self.transform_img = [
             transforms.Resize(resize),
             # transforms.RandomRotation(rotate_degrees, transforms.InterpolationMode.BILINEAR),
@@ -59,7 +96,7 @@ class BreastCancerDataset(Dataset):
         img_name = f"{self.metaData.iloc[idx, 1]}_{self.metaData.iloc[idx, 2]}.png"
         img_path = os.path.join(self.img_dir, img_name)
         image = Image.open(img_path)
-        self.transform_img(image)
+        image = self.transform_img(image)
 
         cancer = self.metaData.iloc[idx, 6]
 
@@ -71,4 +108,3 @@ class BreastCancerDataset(Dataset):
             "image_name": os.path.split(img_path)[-1],
             "image_path": img_path,
         }
-

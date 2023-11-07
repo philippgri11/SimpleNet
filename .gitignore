@@ -7,3 +7,7 @@ datasets/data/img/
 datasets/data/
 
 .DS_Store
+
+*.pyc
+
+notebooks/.ipynb_checkpoints/
