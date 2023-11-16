@@ -5,6 +5,8 @@ import pandas as pd
 from torch.utils.data import Dataset
 from PIL import Image
 from torchvision import transforms
+import torch
+from torchvision.transforms import functional_pil
 
 IMAGENET_MEAN = [0.485]
 IMAGENET_STD = [0.229]
@@ -75,16 +77,17 @@ class BreastCancerDataset(Dataset):
         self.transform_img = [
             transforms.Resize(resize),
             # transforms.RandomRotation(rotate_degrees, transforms.InterpolationMode.BILINEAR),
-            transforms.ColorJitter(brightness_factor, contrast_factor, saturation_factor),
-            transforms.RandomHorizontalFlip(h_flip_p),
-            transforms.RandomVerticalFlip(v_flip_p),
-            transforms.RandomGrayscale(gray_p),
-            transforms.RandomAffine(rotate_degrees,
-                                    translate=(translate, translate),
-                                    scale=(1.0 - scale, 1.0 + scale),
-                                    interpolation=transforms.InterpolationMode.BILINEAR),
-            transforms.CenterCrop(imagesize),
+            # transforms.ColorJitter(brightness_factor, contrast_factor, saturation_factor),
+            # transforms.RandomHorizontalFlip(h_flip_p),
+            # transforms.RandomVerticalFlip(v_flip_p),
+            # transforms.RandomGrayscale(gray_p),
+            # transforms.RandomAffine(rotate_degrees,
+            #                         translate=(translate, translate),
+            #                         scale=(1.0 - scale, 1.0 + scale),
+            #                         interpolation=transforms.InterpolationMode.BILINEAR),
+            # transforms.CenterCrop(imagesize),
             transforms.ToTensor(),
+            transforms.Lambda(lambda x: torch.cat([x, x, x], 0)),
             transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
         ]
         self.transform_img = transforms.Compose(self.transform_img)
@@ -96,8 +99,8 @@ class BreastCancerDataset(Dataset):
         img_name = f"{self.metaData.iloc[idx, 1]}_{self.metaData.iloc[idx, 2]}.png"
         img_path = os.path.join(self.img_dir, img_name)
         image = Image.open(img_path)
-        image = self.transform_img(image)
 
+        image = self.transform_img(image)
         cancer = self.metaData.iloc[idx, 6]
 
         return {
@@ -108,3 +111,4 @@ class BreastCancerDataset(Dataset):
             "image_name": os.path.split(img_path)[-1],
             "image_path": img_path,
         }
+        # return image, cancer

@@ -11,3 +11,6 @@ datasets/data/
 *.pyc
 
 notebooks/.ipynb_checkpoints/
+
+data
+models

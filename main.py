@@ -10,20 +10,18 @@ import os
 import sys
 
 import click
-import numpy as np
 import torch
 
 sys.path.append("src")
 import backbones
-import common
-import metrics
-import simplenet 
+import simplenet
 import utils
 
 LOGGER = logging.getLogger(__name__)
 
 _DATASETS = {
     "mvtec": ["datasets.mvtec", "MVTecDataset"],
+    "breast_cancer": ["datasets.rsna_breast_cancer", "BreastCancerDataset"]
 }
 
 
@@ -42,15 +40,15 @@ def main(**kwargs):
 
 @main.result_callback()
 def run(
-    methods,
-    results_path,
-    gpu,
-    seed,
-    log_group,
-    log_project,
-    run_name,
-    test,
-    save_segmentation_images
+        methods,
+        results_path,
+        gpu,
+        seed,
+        log_group,
+        log_project,
+        run_name,
+        test,
+        save_segmentation_images
 ):
     methods = {key: item for (key, item) in methods}
 
@@ -95,14 +93,14 @@ def run(
             if not test:
                 i_auroc, p_auroc, pro_auroc = SimpleNet.train(dataloaders["training"], dataloaders["testing"])
             else:
-                i_auroc, p_auroc, pro_auroc =  SimpleNet.test(dataloaders["training"], dataloaders["testing"], save_segmentation_images)
-
+                i_auroc, p_auroc, pro_auroc = SimpleNet.test(dataloaders["training"], dataloaders["testing"],
+                                                             save_segmentation_images)
 
             result_collect.append(
                 {
                     "dataset_name": dataset_name,
-                    "instance_auroc": i_auroc, # auroc,
-                    "full_pixel_auroc": p_auroc, # full_pixel_auroc,
+                    "instance_auroc": i_auroc,  # auroc,
+                    "full_pixel_auroc": p_auroc,  # full_pixel_auroc,
                     "anomaly_pixel_auroc": pro_auroc,
                 }
             )
@@ -147,26 +145,26 @@ def run(
 @click.option("--proj_layer_type", type=int, default=0)
 @click.option("--mix_noise", type=int, default=1)
 def net(
-    backbone_names,
-    layers_to_extract_from,
-    pretrain_embed_dimension,
-    target_embed_dimension,
-    patchsize,
-    embedding_size,
-    meta_epochs,
-    aed_meta_epochs,
-    gan_epochs,
-    noise_std,
-    dsc_layers, 
-    dsc_hidden,
-    dsc_margin,
-    dsc_lr,
-    auto_noise,
-    train_backbone,
-    cos_lr,
-    pre_proj,
-    proj_layer_type,
-    mix_noise,
+        backbone_names,
+        layers_to_extract_from,
+        pretrain_embed_dimension,
+        target_embed_dimension,
+        patchsize,
+        embedding_size,
+        meta_epochs,
+        aed_meta_epochs,
+        gan_epochs,
+        noise_std,
+        dsc_layers,
+        dsc_hidden,
+        dsc_margin,
+        dsc_lr,
+        auto_noise,
+        train_backbone,
+        cos_lr,
+        pre_proj,
+        proj_layer_type,
+        mix_noise,
 ):
     backbone_names = list(backbone_names)
     if len(backbone_names) > 1:
@@ -181,7 +179,7 @@ def net(
     def get_simplenet(input_shape, device):
         simplenets = []
         for backbone_name, layers_to_extract_from in zip(
-            backbone_names, layers_to_extract_from_coll
+                backbone_names, layers_to_extract_from_coll
         ):
             backbone_seed = None
             if ".seed-" in backbone_name:
@@ -242,24 +240,24 @@ def net(
 @click.option("--vflip", default=0.0, type=float)
 @click.option("--augment", is_flag=True)
 def dataset(
-    name,
-    data_path,
-    subdatasets,
-    train_val_split,
-    batch_size,
-    resize,
-    imagesize,
-    num_workers,
-    rotate_degrees,
-    translate,
-    scale,
-    brightness,
-    contrast,
-    saturation,
-    gray,
-    hflip,
-    vflip,
-    augment,
+        name,
+        data_path,
+        subdatasets,
+        train_val_split,
+        batch_size,
+        resize,
+        imagesize,
+        num_workers,
+        rotate_degrees,
+        translate,
+        scale,
+        brightness,
+        contrast,
+        saturation,
+        gray,
+        hflip,
+        vflip,
+        augment,
 ):
     dataset_info = _DATASETS[name]
     dataset_library = __import__(dataset_info[0], fromlist=[dataset_info[1]])
@@ -295,7 +293,7 @@ def dataset(
                 split=dataset_library.DatasetSplit.TEST,
                 seed=seed,
             )
-            
+
             LOGGER.info(f"Dataset: train={len(train_dataset)} test={len(test_dataset)}")
 
             train_dataloader = torch.utils.data.DataLoader(
