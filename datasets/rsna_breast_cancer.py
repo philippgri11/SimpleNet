@@ -66,11 +66,11 @@ class BreastCancerDataset(Dataset):
         n_images = len(self.metaData)
         train_end = int(n_images * train_val_test_split[0])
         val_end = train_end + int(n_images * train_val_test_split[1])
-        if self.split == DatasetSplit.TRAIN:
+        if self.split.value == DatasetSplit.TRAIN.value:
             self.metaData = self.metaData[:train_end]
-        elif self.split == DatasetSplit.VAL:
+        elif self.split.value == DatasetSplit.VAL.value:
             self.metaData = self.metaData[train_end:val_end]
-        elif self.split == DatasetSplit.TEST:
+        elif self.split.value == DatasetSplit.TEST.value:
             self.metaData = self.metaData[val_end:]
 
         # Define the transformations

@@ -390,21 +390,21 @@ class SimpleNet(torch.nn.Module):
 
         
         state_dict = {}
-        ckpt_path = os.path.join(self.ckpt_dir, "ckpt.pth")
-        if os.path.exists(ckpt_path):
-            state_dict = torch.load(ckpt_path, map_location=self.device)
-            if 'discriminator' in state_dict:
-                self.discriminator.load_state_dict(state_dict['discriminator'])
-                if "pre_projection" in state_dict:
-                    self.pre_projection.load_state_dict(state_dict["pre_projection"])
-            else:
-                self.load_state_dict(state_dict, strict=False)
-
-            self.predict(training_data, "train_")
-            scores, segmentations, features, labels_gt, masks_gt = self.predict(test_data)
-            auroc, full_pixel_auroc, anomaly_pixel_auroc = self._evaluate(test_data, scores, segmentations, features, labels_gt, masks_gt)
-            
-            return auroc, full_pixel_auroc, anomaly_pixel_auroc
+        # ckpt_path = os.path.join(self.ckpt_dir, "ckpt.pth")
+        # if os.path.exists(ckpt_path):
+        #     state_dict = torch.load(ckpt_path, map_location=self.device)
+        #     if 'discriminator' in state_dict:
+        #         self.discriminator.load_state_dict(state_dict['discriminator'])
+        #         if "pre_projection" in state_dict:
+        #             self.pre_projection.load_state_dict(state_dict["pre_projection"])
+        #     else:
+        #         self.load_state_dict(state_dict, strict=False)
+        #
+        #     self.predict(training_data, "train_")
+        #     scores, segmentations, features, labels_gt, masks_gt = self.predict(test_data)
+        #     auroc, full_pixel_auroc, anomaly_pixel_auroc = self._evaluate(test_data, scores, segmentations, features, labels_gt, masks_gt)
+        #
+        #     return auroc, full_pixel_auroc, anomaly_pixel_auroc
         
         def update_state_dict(d):
             
@@ -446,9 +446,13 @@ class SimpleNet(torch.nn.Module):
             print(f"----- {i_mepoch} I-AUROC:{round(auroc, 4)}(MAX:{round(best_record[0], 4)})"
                   f"  P-AUROC{round(full_pixel_auroc, 4)}(MAX:{round(best_record[1], 4)}) -----"
                   f"  PRO-AUROC{round(pro, 4)}(MAX:{round(best_record[2], 4)}) -----")
-        
+
+            ckpt_path = os.path.join(self.ckpt_dir, f"ckpt_epoch_{i_mepoch}.pth")
+            torch.save(state_dict, ckpt_path)
+
+        ckpt_path = os.path.join(self.ckpt_dir, f"ckpt.pth")
         torch.save(state_dict, ckpt_path)
-        
+
         return best_record
             
 
@@ -463,81 +467,84 @@ class SimpleNet(torch.nn.Module):
         # self.feature_dec.eval()
         i_iter = 0
         LOGGER.info(f"Training discriminator...")
-        with tqdm.tqdm(total=self.gan_epochs) as pbar:
+        with tqdm.tqdm(total=self.gan_epochs, desc="gan_epochs") as gan_epoch_bar:
             for i_epoch in range(self.gan_epochs):
                 all_loss = []
                 all_p_true = []
                 all_p_fake = []
                 all_p_interp = []
                 embeddings_list = []
-                for data_item in input_data:
-                    self.dsc_opt.zero_grad()
-                    if self.pre_proj > 0:
-                        self.proj_opt.zero_grad()
-                    # self.dec_opt.zero_grad()
+                with tqdm.tqdm(total=len(input_data), desc="train_set", leave=False, position=0) as train_set_bar:
+                    for data_item in input_data:
+                        self.dsc_opt.zero_grad()
+                        if self.pre_proj > 0:
+                            self.proj_opt.zero_grad()
+                        # self.dec_opt.zero_grad()
 
-                    i_iter += 1
-                    img = data_item["image"]
-                    img = img.to(torch.float).to(self.device)
-                    if self.pre_proj > 0:
-                        true_feats = self.pre_projection(self._embed(img, evaluation=False)[0])
-                    else:
-                        true_feats = self._embed(img, evaluation=False)[0]
-                    
-                    noise_idxs = torch.randint(0, self.mix_noise, torch.Size([true_feats.shape[0]]))
-                    noise_one_hot = torch.nn.functional.one_hot(noise_idxs, num_classes=self.mix_noise).to(self.device) # (N, K)
-                    noise = torch.stack([
-                        torch.normal(0, self.noise_std * 1.1**(k), true_feats.shape)
-                        for k in range(self.mix_noise)], dim=1).to(self.device) # (N, K, C)
-                    noise = (noise * noise_one_hot.unsqueeze(-1)).sum(1)
-                    fake_feats = true_feats + noise
+                        i_iter += 1
+                        img = data_item["image"]
+                        img = img.to(torch.float).to(self.device)
+                        if self.pre_proj > 0:
+                            true_feats = self.pre_projection(self._embed(img, evaluation=False)[0])
+                        else:
+                            true_feats = self._embed(img, evaluation=False)[0]
 
-                    scores = self.discriminator(torch.cat([true_feats, fake_feats]))
-                    true_scores = scores[:len(true_feats)]
-                    fake_scores = scores[len(fake_feats):]
-                    
-                    th = self.dsc_margin
-                    p_true = (true_scores.detach() >= th).sum() / len(true_scores)
-                    p_fake = (fake_scores.detach() < -th).sum() / len(fake_scores)
-                    true_loss = torch.clip(-true_scores + th, min=0)
-                    fake_loss = torch.clip(fake_scores + th, min=0)
+                        noise_idxs = torch.randint(0, self.mix_noise, torch.Size([true_feats.shape[0]]))
+                        noise_one_hot = torch.nn.functional.one_hot(noise_idxs, num_classes=self.mix_noise).to(self.device) # (N, K)
+                        noise = torch.stack([
+                            torch.normal(0, self.noise_std * 1.1**(k), true_feats.shape)
+                            for k in range(self.mix_noise)], dim=1).to(self.device) # (N, K, C)
+                        noise = (noise * noise_one_hot.unsqueeze(-1)).sum(1)
+                        fake_feats = true_feats + noise
 
-                    self.logger.logger.add_scalar(f"p_true", p_true, self.logger.g_iter)
-                    self.logger.logger.add_scalar(f"p_fake", p_fake, self.logger.g_iter)
+                        scores = self.discriminator(torch.cat([true_feats, fake_feats]))
+                        true_scores = scores[:len(true_feats)]
+                        fake_scores = scores[len(fake_feats):]
 
-                    loss = true_loss.mean() + fake_loss.mean()
-                    self.logger.logger.add_scalar("loss", loss, self.logger.g_iter)
-                    self.logger.step()
+                        th = self.dsc_margin
+                        p_true = (true_scores.detach() >= th).sum() / len(true_scores)
+                        p_fake = (fake_scores.detach() < -th).sum() / len(fake_scores)
+                        true_loss = torch.clip(-true_scores + th, min=0)
+                        fake_loss = torch.clip(fake_scores + th, min=0)
 
-                    loss.backward()
-                    if self.pre_proj > 0:
-                        self.proj_opt.step()
-                    if self.train_backbone:
-                        self.backbone_opt.step()
-                    self.dsc_opt.step()
+                        self.logger.logger.add_scalar(f"p_true", p_true, self.logger.g_iter)
+                        self.logger.logger.add_scalar(f"p_fake", p_fake, self.logger.g_iter)
 
-                    loss = loss.detach().cpu() 
-                    all_loss.append(loss.item())
-                    all_p_true.append(p_true.cpu().item())
-                    all_p_fake.append(p_fake.cpu().item())
-                
-                if len(embeddings_list) > 0:
-                    self.auto_noise[1] = torch.cat(embeddings_list).std(0).mean(-1)
-                
-                if self.cos_lr:
-                    self.dsc_schl.step()
-                
-                all_loss = sum(all_loss) / len(input_data)
-                all_p_true = sum(all_p_true) / len(input_data)
-                all_p_fake = sum(all_p_fake) / len(input_data)
-                cur_lr = self.dsc_opt.state_dict()['param_groups'][0]['lr']
-                pbar_str = f"epoch:{i_epoch} loss:{round(all_loss, 5)} "
-                pbar_str += f"lr:{round(cur_lr, 6)}"
-                pbar_str += f" p_true:{round(all_p_true, 3)} p_fake:{round(all_p_fake, 3)}"
-                if len(all_p_interp) > 0:
-                    pbar_str += f" p_interp:{round(sum(all_p_interp) / len(input_data), 3)}"
-                pbar.set_description_str(pbar_str)
-                pbar.update(1)
+                        loss = true_loss.mean() + fake_loss.mean()
+                        self.logger.logger.add_scalar("loss", loss, self.logger.g_iter)
+                        self.logger.step()
+
+                        loss.backward()
+                        if self.pre_proj > 0:
+                            self.proj_opt.step()
+                        if self.train_backbone:
+                            self.backbone_opt.step()
+                        self.dsc_opt.step()
+
+                        loss = loss.detach().cpu()
+                        all_loss.append(loss.item())
+                        all_p_true.append(p_true.cpu().item())
+                        all_p_fake.append(p_fake.cpu().item())
+
+                        train_set_bar.update(1)
+
+                    if len(embeddings_list) > 0:
+                        self.auto_noise[1] = torch.cat(embeddings_list).std(0).mean(-1)
+
+                    if self.cos_lr:
+                        self.dsc_schl.step()
+
+                    all_loss = sum(all_loss) / len(input_data)
+                    all_p_true = sum(all_p_true) / len(input_data)
+                    all_p_fake = sum(all_p_fake) / len(input_data)
+                    cur_lr = self.dsc_opt.state_dict()['param_groups'][0]['lr']
+                    pbar_str = f"epoch:{i_epoch} loss:{round(all_loss, 5)} "
+                    pbar_str += f"lr:{round(cur_lr, 6)}"
+                    pbar_str += f" p_true:{round(all_p_true, 3)} p_fake:{round(all_p_fake, 3)}"
+                    if len(all_p_interp) > 0:
+                        pbar_str += f" p_interp:{round(sum(all_p_interp) / len(input_data), 3)}"
+                    gan_epoch_bar.set_description_str(pbar_str)
+                    gan_epoch_bar.update(1)
 
 
     def predict(self, data, prefix=""):
