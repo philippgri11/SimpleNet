@@ -1,5 +1,4 @@
 import timm  # noqa
-import torch
 import torchvision.models as models  # noqa
 
 def load_ref_wrn50():

@@ -1,4 +1,5 @@
 import copy
+import dataclasses
 from typing import List
 
 import numpy as np
@@ -208,5 +209,10 @@ class ForwardHook:
 
 class LastLayerToExtractReachedException(Exception):
     pass
+
+@dataclasses.dataclass
+class BackboneSetting:
+    backbone_name: str
+    backbone_layers: List[str]
 
 

@@ -13,9 +13,8 @@ import click
 import torch
 
 sys.path.append("src")
-import backbones
 import simplenet
-import utils
+from src import utils, backbones
 
 LOGGER = logging.getLogger(__name__)
 
