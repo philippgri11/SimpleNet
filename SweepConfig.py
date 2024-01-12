@@ -1,5 +1,5 @@
 from datetime import datetime
-from common import BackboneSetting
+from src.common import BackboneSetting
 
 sweep_configuration = {
     'method': 'grid',
