@@ -12,7 +12,9 @@ dotenv.load_dotenv()
 device = 'cuda'
 
 
-def train(config, train_ds, val_ds):
+def train():
+    global train_ds, val_ds
+    config = wandb.config
     train_loader = DataLoader(train_ds, batch_size=config.batch_size, shuffle=True, pin_memory=True)
     val_loader = DataLoader(val_ds, batch_size=config.batch_size, shuffle=False)
 
@@ -49,22 +51,21 @@ def train(config, train_ds, val_ds):
     net.train(train_loader, val_loader)
 
 
-if __name__ == '__main__':
-    img_dir = os.environ['IMAGE_DIR']
-    csv_file = os.environ['CSV_PATH']
+img_dir = os.environ['IMAGE_DIR']
+csv_file = os.environ['CSV_PATH']
 
-    ds = BreastCancerDataset(
-        img_dir=img_dir,
-        meta_data_csv_path=csv_file,
-        train_val_test_split=(0.9, 0.1, 0)
-    )
+train_ds = BreastCancerDataset(
+    img_dir=img_dir,
+    meta_data_csv_path=csv_file,
+    train_val_test_split=(0.9, 0.1, 0)
+)
 
-    val_ds = BreastCancerDataset(
-        img_dir=img_dir,
-        meta_data_csv_path=csv_file,
-        split=DatasetSplit.VAL,
-        train_val_test_split=(0.9, 0.1, 0)
-    )
+val_ds = BreastCancerDataset(
+    img_dir=img_dir,
+    meta_data_csv_path=csv_file,
+    split=DatasetSplit.VAL,
+    train_val_test_split=(0.9, 0.1, 0)
+)
 
-    sweep_id = wandb.sweep(sweep=sweep_configuration, project=os.environ['PROJECT_NAME'])
-    wandb.agent(sweep_id, function=train)
+sweep_id = wandb.sweep(sweep=sweep_configuration, project=os.environ['PROJECT_NAME'])
+wandb.agent(sweep_id, function=train)
