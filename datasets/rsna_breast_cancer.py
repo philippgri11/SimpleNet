@@ -96,8 +96,10 @@ class BreastCancerDataset(Dataset):
         return len(self.metaData)
 
     def __getitem__(self, idx):
-        img_name = f"{self.metaData.iloc[idx, 1]}_{self.metaData.iloc[idx, 2]}.png"
-        img_path = os.path.join(self.img_dir, img_name)
+        patient_id = self.metaData.iloc[idx, 1]
+        image_id = self.metaData.iloc[idx, 2]
+        img_name = f"{image_id}.png"
+        img_path = os.path.join(self.img_dir, patient_id, img_name)
         image = Image.open(img_path)
 
         image = self.transform_img(image)

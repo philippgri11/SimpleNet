@@ -50,8 +50,8 @@ def train(config, train_ds, val_ds):
 
 
 if __name__ == '__main__':
-    img_dir = "data/rsna_breast_cancer/rsna_breast_cancer"
-    csv_file = "data/rsna_breast_cancer/train.csv"
+    img_dir = os.environ['IMAGE_DIR']
+    csv_file = os.environ['CSV_PATH']
 
     ds = BreastCancerDataset(
         img_dir=img_dir,
