@@ -19,11 +19,11 @@ def train(config=None):
         train_loader = DataLoader(train_ds, batch_size=config.batch_size, shuffle=True, pin_memory=True)
         val_loader = DataLoader(val_ds, batch_size=config.batch_size, shuffle=False)
 
-        backbone = backbones.load(config.backbone.backbone_name)
+        backbone = backbones.load(config.backbone['backbone_name'])
         net = SimpleNet(device, wandb_run=run)
         net.load(
             backbone=backbone,
-            layers_to_extract_from=config.backbone.backbone_layers,
+            layers_to_extract_from=config.backbone['backbone_layers'],
             device=device,
             input_shape=config.input_shape,
             pretrain_embed_dimension=config.pretrain_embed_dimension,

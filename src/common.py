@@ -96,11 +96,11 @@ class RescaleSegmentor:
             if isinstance(features, np.ndarray):
                 features = torch.from_numpy(features)
             features = features.to(self.device).permute(0, 3, 1, 2)
-            if self.target_size[0] * self.target_size[1] * features.shape[0] * features.shape[1] >= 2**31:
-                subbatch_size = int((2**31-1) / (self.target_size[0] * self.target_size[1] * features.shape[1]))
+            if self.target_size[0] * self.target_size[1] * features.shape[0] * features.shape[1] >= 2 ** 31:
+                subbatch_size = int((2 ** 31 - 1) / (self.target_size[0] * self.target_size[1] * features.shape[1]))
                 interpolated_features = []
                 for i_subbatch in range(int(features.shape[0] / subbatch_size + 1)):
-                    subfeatures = features[i_subbatch*subbatch_size:(i_subbatch+1)*subbatch_size]
+                    subfeatures = features[i_subbatch * subbatch_size:(i_subbatch + 1) * subbatch_size]
                     subfeatures = subfeatures.unsuqeeze(0) if len(subfeatures.shape) == 3 else subfeatures
                     subfeatures = F.interpolate(
                         subfeatures, size=self.target_size, mode="bilinear", align_corners=False
@@ -116,7 +116,7 @@ class RescaleSegmentor:
         return [
             ndimage.gaussian_filter(patch_score, sigma=self.smoothing)
             for patch_score in patch_scores
-        ], [ 
+        ], [
             feature
             for feature in features
         ]
@@ -210,9 +210,8 @@ class ForwardHook:
 class LastLayerToExtractReachedException(Exception):
     pass
 
+
 @dataclasses.dataclass
 class BackboneSetting:
     backbone_name: str
     backbone_layers: List[str]
-
-
