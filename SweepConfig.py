@@ -7,6 +7,7 @@ sweep_configuration = {
     'parameters': {
         'backbone': {'values': [BackboneSetting('efficientnet_b1', ['conv_head'])]},
         'input_shape': {'value': (3, 224, 224)},
+        'batch_size': {'value': 16},
         'pretrain_embed_dimension': {'values': [64]},
         'target_embed_dimension': {'values': [64]},
         'patchsize': {'values': [3]},
