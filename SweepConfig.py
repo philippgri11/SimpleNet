@@ -1,3 +1,4 @@
+import dataclasses
 from datetime import datetime
 from src.common import BackboneSetting
 
@@ -5,7 +6,7 @@ sweep_configuration = {
     'method': 'grid',
     'name': 'HyperparameterSearch' + datetime.now().strftime("%d/%m/%Y, %H:%M"),
     'parameters': {
-        'backbone': {'values': [BackboneSetting('efficientnet_b1', ['conv_head'])]},
+        'backbone': {'values': [dataclasses.asdict(BackboneSetting('efficientnet_b1', ['conv_head']))]},
         'input_shape': {'value': (3, 224, 224)},
         'batch_size': {'value': 16},
         'pretrain_embed_dimension': {'values': [64]},
