@@ -50,6 +50,7 @@ net.load(
     auto_noise=0,
     train_backbone=True,
     cos_lr=False,
+    lr=0.001,
     pre_proj=0,
     proj_layer_type=0,
     mix_noise=1,

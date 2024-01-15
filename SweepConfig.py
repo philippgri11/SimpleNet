@@ -19,10 +19,11 @@ sweep_configuration = {
         'dsc_layers': {'values': [2]},
         'dsc_hidden': {'values': [32]},
         'dsc_margin': {'values': [0.5]},
-        'dsc_lr': {'values': [0.001]},
+        'dsc_lr': {'values': [0.001]}, # LR for Discriminator
         'auto_noise': {'value': 0},
         'train_backbone': {'value': True},
         'cos_lr': {'value': False},
+        'lr': {'value': 0.001}, # LR for Projection and Backbone
         'pre_proj': {'value': 0},
         'proj_layer_type': {'value': 0},
         'mix_noise': {'value': 1},
