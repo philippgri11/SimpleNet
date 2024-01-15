@@ -5,7 +5,6 @@ from torch.utils.data import DataLoader
 from time import time
 import dotenv
 import os
-from SweepConfig import sweep_configuration as config
 
 dotenv.load_dotenv()
 device = 'mps'
@@ -16,14 +15,14 @@ csv_file = os.environ['CSV_PATH']
 train_ds = BreastCancerDataset(
     img_dir=img_dir,
     meta_data_csv_path=csv_file,
-    train_val_test_split=(0.0001, 0.1, 0)
+    train_val_test_split=(0.0001, 0.01, 0)
 )
 
 val_ds = BreastCancerDataset(
     img_dir=img_dir,
     meta_data_csv_path=csv_file,
     split=DatasetSplit.VAL,
-    train_val_test_split=(0.0001, 0.1, 0)
+    train_val_test_split=(0.0001, 0.01, 0)
 )
 
 train_loader = DataLoader(train_ds, batch_size=1, shuffle=True, pin_memory=True)

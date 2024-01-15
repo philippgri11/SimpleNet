@@ -100,8 +100,6 @@ def set_torch_device(gpu_ids):
         gpu_ids: [list] list of gpu ids. If empty, cpu is used.
     """
     if len(gpu_ids):
-        # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-        # os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_ids[0])
         return torch.device("cuda:{}".format(gpu_ids[0]))
     return torch.device("cpu")
 

@@ -226,7 +226,6 @@ class SimpleNet(torch.nn.Module):
     def _embed(self, images, detach=True, provide_patch_shapes=False, evaluation=False):
         """Returns feature embeddings for images."""
 
-        B = len(images)
         if not evaluation and self.train_backbone:
             self.forward_modules["feature_aggregator"].train()
             features = self.forward_modules["feature_aggregator"](images, eval=evaluation)
@@ -236,7 +235,8 @@ class SimpleNet(torch.nn.Module):
                 features = self.forward_modules["feature_aggregator"](images)
 
         features = [features[layer] for layer in self.layers_to_extract_from]
-
+        # Braucht man wahrscheinlich nicht optimieren, skaliert "nur" mit der Anzahl der Layer
+        # aus dem Backbone, die man verwendet
         for i, feat in enumerate(features):
             if len(feat.shape) == 3:
                 B, L, C = feat.shape
@@ -249,6 +249,7 @@ class SimpleNet(torch.nn.Module):
         features = [x[0] for x in features]
         ref_num_patches = patch_shapes[0]
 
+        # Muss wahrscheinlich nicht optimiert werden, wird bei einem layer anscheinend nicht aufgerufen
         for i in range(1, len(features)):
             _features = features[i]
             patch_dims = patch_shapes[i]
@@ -343,7 +344,7 @@ class SimpleNet(torch.nn.Module):
         scores = np.squeeze(np.array(scores))
         img_min_scores = scores.min(axis=-1)
         img_max_scores = scores.max(axis=-1)
-        scores = (scores - img_min_scores) / (img_max_scores - img_min_scores)
+        scores = (scores - img_min_scores) / (img_max_scores - img_min_scores + 1e-8)
         # scores = np.mean(scores, axis=0)
 
         auroc = metrics.compute_imagewise_retrieval_metrics(
@@ -416,7 +417,6 @@ class SimpleNet(torch.nn.Module):
 
             self._train_discriminator(training_data)
 
-            # torch.cuda.empty_cache()
             scores, segmentations, features, labels_gt, masks_gt = self.predict(test_data)
             auroc, full_pixel_auroc, pro = self._evaluate(test_data, scores, segmentations, features, labels_gt,
                                                           masks_gt)
@@ -425,8 +425,6 @@ class SimpleNet(torch.nn.Module):
                 self.run.log(
                     {
                         "Metrics/auroc": auroc,
-                        "Metrics/full_pixel_auroc": full_pixel_auroc,
-                        "Metrics/pro": pro
                     }
                 )
 
@@ -465,9 +463,7 @@ class SimpleNet(torch.nn.Module):
         if self.pre_proj > 0:
             self.pre_projection.train()
         self.discriminator.train()
-        # self.feature_enc.eval()
-        # self.feature_dec.eval()
-        i_iter = 0
+
         LOGGER.info(f"Training discriminator...")
         with tqdm.tqdm(total=self.gan_epochs, desc="gan_epochs") as gan_epoch_bar:
             for i_epoch in range(self.gan_epochs):
@@ -481,15 +477,12 @@ class SimpleNet(torch.nn.Module):
                         self.dsc_opt.zero_grad()
                         if self.pre_proj > 0:
                             self.proj_opt.zero_grad()
-                        # self.dec_opt.zero_grad()
 
-                        i_iter += 1
-                        img = data_item["image"]
-                        img = img.to(torch.float).to(self.device)
+                        img = data_item["image"].to(torch.float).to(self.device)
+
+                        true_feats = self._embed(img, evaluation=False)[0]
                         if self.pre_proj > 0:
-                            true_feats = self.pre_projection(self._embed(img, evaluation=False)[0])
-                        else:
-                            true_feats = self._embed(img, evaluation=False)[0]
+                            true_feats = self.pre_projection(true_feats)
 
                         noise_idxs = torch.randint(0, self.mix_noise, torch.Size([true_feats.shape[0]]))
                         noise_one_hot = torch.nn.functional.one_hot(noise_idxs, num_classes=self.mix_noise).to(
@@ -556,7 +549,7 @@ class SimpleNet(torch.nn.Module):
 
     def _predict_dataloader(self, dataloader, prefix):
         """This function provides anomaly scores/maps for full dataloaders."""
-        _ = self.forward_modules.eval()
+        self.forward_modules.eval()
 
         img_paths = []
         scores = []
@@ -574,16 +567,16 @@ class SimpleNet(torch.nn.Module):
                     image = data["image"]
                     img_paths.extend(data['image_path'])
                 _scores, _masks, _feats = self._predict(image)
-                for score, mask, feat, is_anomaly in zip(_scores, _masks, _feats, data["is_anomaly"].numpy().tolist()):
-                    scores.append(score)
-                    masks.append(mask)
+                scores.extend(_scores)
+                masks.extend(_masks)
+                features.extend(_feats)
 
         return scores, masks, features, labels_gt, masks_gt
 
     def _predict(self, images):
         """Infer score and mask for a batch of images."""
         images = images.to(torch.float).to(self.device)
-        _ = self.forward_modules.eval()
+        self.forward_modules.eval()
 
         batchsize = images.shape[0]
         if self.pre_proj > 0:
@@ -596,9 +589,7 @@ class SimpleNet(torch.nn.Module):
             if self.pre_proj > 0:
                 features = self.pre_projection(features)
 
-            patch_scores = image_scores = -self.discriminator(features)
-            patch_scores = patch_scores.cpu().numpy()
-            image_scores = image_scores.cpu().numpy()
+            patch_scores = image_scores = -self.discriminator(features).cpu().numpy()
 
             image_scores = self.patch_maker.unpatch_scores(
                 image_scores, batchsize=batchsize
@@ -682,6 +673,10 @@ class PatchMaker:
         self.patchsize = patchsize
         self.stride = stride
         self.top_k = top_k
+        self.padding = (self.patchsize - 1) // 2
+        self.unfolder = torch.nn.Unfold(
+            kernel_size=self.patchsize, stride=self.stride, padding=self.padding, dilation=1
+        )
 
     def patchify(self, features, return_spatial_info=False):
         """Convert a tensor into a tensor of respective patches.
@@ -691,17 +686,13 @@ class PatchMaker:
             x: [torch.Tensor, bs * w//stride * h//stride, c, patchsize,
             patchsize]
         """
-        padding = int((self.patchsize - 1) / 2)
-        unfolder = torch.nn.Unfold(
-            kernel_size=self.patchsize, stride=self.stride, padding=padding, dilation=1
-        )
-        unfolded_features = unfolder(features)
-        number_of_total_patches = []
-        for s in features.shape[-2:]:
-            n_patches = (
-                                s + 2 * padding - 1 * (self.patchsize - 1) - 1
-                        ) / self.stride + 1
-            number_of_total_patches.append(int(n_patches))
+        unfolded_features = self.unfolder(features)
+        if return_spatial_info:
+            number_of_total_patches = []
+            for s in features.shape[-2:]:
+                n_patches = (s + 2 * self.padding - 1 * (self.patchsize - 1) - 1) // self.stride + 1
+                number_of_total_patches.append(n_patches)
+
         unfolded_features = unfolded_features.reshape(
             *features.shape[:2], self.patchsize, self.patchsize, -1
         )
