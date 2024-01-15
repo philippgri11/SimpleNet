@@ -12,3 +12,5 @@ scikit-learn
 scikit-image
 tensorboard
 matplotlib
+wandb
+python-dotenv
