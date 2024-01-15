@@ -437,17 +437,14 @@ class SimpleNet(torch.nn.Module):
             if best_record is None:
                 best_record = [auroc, full_pixel_auroc, pro]
                 update_state_dict(state_dict)
-                # state_dict = OrderedDict({k:v.detach().cpu() for k, v in self.state_dict().items()})
             else:
                 if auroc > best_record[0]:
                     best_record = [auroc, full_pixel_auroc, pro]
                     update_state_dict(state_dict)
-                    # state_dict = OrderedDict({k:v.detach().cpu() for k, v in self.state_dict().items()})
                 elif auroc == best_record[0] and full_pixel_auroc > best_record[1]:
                     best_record[1] = full_pixel_auroc
                     best_record[2] = pro
                     update_state_dict(state_dict)
-                    # state_dict = OrderedDict({k:v.detach().cpu() for k, v in self.state_dict().items()})
 
             print(f"----- {i_mepoch} I-AUROC:{round(auroc, 4)}(MAX:{round(best_record[0], 4)})"
                   f"  P-AUROC{round(full_pixel_auroc, 4)}(MAX:{round(best_record[1], 4)}) -----"
@@ -599,8 +596,6 @@ class SimpleNet(torch.nn.Module):
             if self.pre_proj > 0:
                 features = self.pre_projection(features)
 
-            # features = features.cpu().numpy()
-            # features = np.ascontiguousarray(features.cpu().numpy())
             patch_scores = image_scores = -self.discriminator(features)
             patch_scores = patch_scores.cpu().numpy()
             image_scores = image_scores.cpu().numpy()

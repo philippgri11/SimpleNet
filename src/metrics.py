@@ -17,17 +17,18 @@ def compute_imagewise_retrieval_metrics(
         anomaly_ground_truth_labels: [np.array or list] [N] Binary labels - 1
                                     if image is an anomaly, 0 if not.
     """
-    fpr, tpr, thresholds = metrics.roc_curve(
-        anomaly_ground_truth_labels, anomaly_prediction_weights
-    )
+    # fpr, tpr, thresholds = metrics.roc_curve(
+    #     anomaly_ground_truth_labels, anomaly_prediction_weights
+    # )
+    fpr, tpr, thresholds = -1, -1, []
     auroc = metrics.roc_auc_score(
         anomaly_ground_truth_labels, anomaly_prediction_weights
     )
     
-    precision, recall, _ = metrics.precision_recall_curve(
-        anomaly_ground_truth_labels, anomaly_prediction_weights
-    )
-    auc_pr = metrics.auc(recall, precision)
+    # precision, recall, _ = metrics.precision_recall_curve(
+    #     anomaly_ground_truth_labels, anomaly_prediction_weights
+    # )
+    # auc_pr = metrics.auc(recall, precision)
     
     return {"auroc": auroc, "fpr": fpr, "tpr": tpr, "threshold": thresholds}
 
