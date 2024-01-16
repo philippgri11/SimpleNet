@@ -327,9 +327,12 @@ class SimpleNet(torch.nn.Module):
         if save_segmentation_images:
             self.save_segmentation_images(test_data, segmentations, scores)
 
-        auroc = metrics.compute_imagewise_retrieval_metrics(
-            scores, anomaly_labels
-        )["auroc"]
+        metrics_ = metrics.compute_imagewise_retrieval_metrics(
+            scores, anomaly_labels, th=self.dsc_margin
+        )
+
+        auroc = metrics_["auroc"]
+        f1 = metrics["f1_score"]
 
         # Compute PRO score & PW Auroc for all images
         pixel_scores = metrics.compute_pixelwise_retrieval_metrics(
@@ -337,7 +340,7 @@ class SimpleNet(torch.nn.Module):
         )
         full_pixel_auroc = pixel_scores["auroc"]
 
-        return auroc, full_pixel_auroc
+        return auroc, full_pixel_auroc, f1
 
     def _evaluate(self, test_data, scores, segmentations, features, labels_gt, masks_gt):
 
@@ -347,9 +350,12 @@ class SimpleNet(torch.nn.Module):
         scores = (scores - img_min_scores) / (img_max_scores - img_min_scores + 1e-8)
         # scores = np.mean(scores, axis=0)
 
-        auroc = metrics.compute_imagewise_retrieval_metrics(
-            scores, labels_gt
-        )["auroc"]
+        metrics_ = metrics.compute_imagewise_retrieval_metrics(
+            scores, labels_gt, th=self.dsc_margin
+        )
+
+        auroc = metrics_["auroc"]
+        f1 = metrics_["f1_score"]
 
         if len(masks_gt) > 0:
             segmentations = np.array(segmentations)
@@ -380,7 +386,7 @@ class SimpleNet(torch.nn.Module):
             full_pixel_auroc = -1
             pro = -1
 
-        return auroc, full_pixel_auroc, pro
+        return auroc, full_pixel_auroc, pro, f1
 
     def train(self, training_data, test_data):
 
@@ -418,13 +424,14 @@ class SimpleNet(torch.nn.Module):
             self._train_discriminator(training_data)
 
             scores, segmentations, features, labels_gt, masks_gt = self.predict(test_data)
-            auroc, full_pixel_auroc, pro = self._evaluate(test_data, scores, segmentations, features, labels_gt,
+            auroc, full_pixel_auroc, pro, f1 = self._evaluate(test_data, scores, segmentations, features, labels_gt,
                                                           masks_gt)
 
             if self.run:
                 self.run.log(
                     {
                         "Metrics/auroc": auroc,
+                        "Metrics/f1": f1,
                     }
                 )
 
