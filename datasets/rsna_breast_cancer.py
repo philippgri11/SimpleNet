@@ -1,6 +1,6 @@
 import os
 from enum import Enum
-from typing import Tuple
+from typing import Tuple, List
 import matplotlib.pyplot as plt# Convert from tensor to PIL Image
 from torchvision.transforms.functional import pad
 import pandas as pd
@@ -122,8 +122,10 @@ class BreastCancerDataset(Dataset):
         img_name = f"{patient_id}_{image_id}.png"
         img_path = os.path.join(self.img_dir, img_name)
         image = Image.open(img_path)
+
         image = pad(image, self.get_padding(image), fill=1)
         image = self.transform_img(image)
+
         cancer = self.metaData.iloc[idx, 6]
         return {
             "image": image,
@@ -135,7 +137,7 @@ class BreastCancerDataset(Dataset):
         }
         # return image, cancer
 
-    def get_padding(self,image):
+    def get_padding(self,image) -> List[int]:
         imsize = image.size
         h_padding = (self.resize[0] - imsize[0]) / 2
         v_padding = (self.resize[1] - imsize[1]) / 2
@@ -144,6 +146,6 @@ class BreastCancerDataset(Dataset):
         r_pad = h_padding if h_padding % 1 == 0 else h_padding - 0.5
         b_pad = v_padding if v_padding % 1 == 0 else v_padding - 0.5
 
-        padding = (int(l_pad), int(t_pad), int(r_pad), int(b_pad))
+        padding = [int(l_pad), int(t_pad), int(r_pad), int(b_pad)]
 
         return padding
