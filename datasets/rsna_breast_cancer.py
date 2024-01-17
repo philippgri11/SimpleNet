@@ -1,7 +1,8 @@
 import os
 from enum import Enum
 from typing import Tuple
-
+import matplotlib.pyplot as plt# Convert from tensor to PIL Image
+from torchvision.transforms.functional import pad
 import pandas as pd
 from torch.utils.data import Dataset
 from PIL import Image
@@ -23,7 +24,7 @@ class BreastCancerDataset(Dataset):
     def __init__(self, img_dir,
                  meta_data=None,
                  meta_data_csv_path=None,
-                 resize=256,
+                 resize=(256,256),
                  imagesize=224,
                  split=DatasetSplit.TRAIN,
                  train_val_test_split: Tuple[float, float, float] | None = None,
@@ -76,7 +77,6 @@ class BreastCancerDataset(Dataset):
 
         # Define the transformations
         self.transform_img = [
-            transforms.Resize(resize),
             transforms.RandomVerticalFlip(v_flip_p),
             transforms.RandomRotation(rotate_degrees, transforms.InterpolationMode.BILINEAR),
             transforms.ToTensor(),
@@ -122,10 +122,9 @@ class BreastCancerDataset(Dataset):
         img_name = f"{patient_id}_{image_id}.png"
         img_path = os.path.join(self.img_dir, img_name)
         image = Image.open(img_path)
-
+        image = pad(image, self.get_padding(image), fill=1)
         image = self.transform_img(image)
         cancer = self.metaData.iloc[idx, 6]
-
         return {
             "image": image,
             "classname": "",
@@ -135,3 +134,16 @@ class BreastCancerDataset(Dataset):
             "image_path": img_path,
         }
         # return image, cancer
+
+    def get_padding(self,image):
+        imsize = image.size
+        h_padding = (self.resize[0] - imsize[0]) / 2
+        v_padding = (self.resize[1] - imsize[1]) / 2
+        l_pad = h_padding if h_padding % 1 == 0 else h_padding + 0.5
+        t_pad = v_padding if v_padding % 1 == 0 else v_padding + 0.5
+        r_pad = h_padding if h_padding % 1 == 0 else h_padding - 0.5
+        b_pad = v_padding if v_padding % 1 == 0 else v_padding - 0.5
+
+        padding = (int(l_pad), int(t_pad), int(r_pad), int(b_pad))
+
+        return padding
