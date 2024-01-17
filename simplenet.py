@@ -438,22 +438,23 @@ class SimpleNet(torch.nn.Module):
             self.logger.logger.add_scalar("i-auroc", auroc, i_mepoch)
             self.logger.logger.add_scalar("p-auroc", full_pixel_auroc, i_mepoch)
             self.logger.logger.add_scalar("pro", pro, i_mepoch)
+            self.logger.logger.add_scalar("f1", f1, i_mepoch)
 
             if best_record is None:
-                best_record = [auroc, full_pixel_auroc, pro]
+                best_record = [auroc, full_pixel_auroc, pro, f1]
                 update_state_dict(state_dict)
             else:
                 if auroc > best_record[0]:
-                    best_record = [auroc, full_pixel_auroc, pro]
+                    best_record = [auroc, full_pixel_auroc, pro, f1]
                     update_state_dict(state_dict)
                 elif auroc == best_record[0] and full_pixel_auroc > best_record[1]:
                     best_record[1] = full_pixel_auroc
                     best_record[2] = pro
+                    best_record[3] = f1
                     update_state_dict(state_dict)
 
             print(f"----- {i_mepoch} I-AUROC:{round(auroc, 4)}(MAX:{round(best_record[0], 4)})"
-                  f"  P-AUROC{round(full_pixel_auroc, 4)}(MAX:{round(best_record[1], 4)}) -----"
-                  f"  PRO-AUROC{round(pro, 4)}(MAX:{round(best_record[2], 4)}) -----")
+                  f"  F1:{round(f1, 4)}(MAX:{round(best_record[3], 4)}) -----")
 
             ckpt_path = os.path.join(self.ckpt_dir, f"ckpt_epoch_{i_mepoch}.pth")
             torch.save(state_dict, ckpt_path)

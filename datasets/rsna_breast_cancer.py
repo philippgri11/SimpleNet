@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import os
 from enum import Enum
+from typing import Tuple
 
 import pandas as pd
 from torch.utils.data import Dataset
@@ -26,6 +29,8 @@ class BreastCancerDataset(Dataset):
                  imagesize=224,
                  split=DatasetSplit.TRAIN,
                  train_val_test_split=(0.7, 0.2, 0.1),
+                 num_images: Tuple[int, int, int, int] | None = None,
+                 # (num_not_cancer, num_skip_not_cancer, num_cancer, num_skip_cancer)
                  rotate_degrees=0,
                  translate=0,
                  brightness_factor=0,
@@ -42,6 +47,7 @@ class BreastCancerDataset(Dataset):
         self.resize = resize
         self.imagesize = imagesize
         self.split = split
+        self.num_images = num_images,
         self.train_val_test_split = train_val_test_split
         self.rotate_degrees = rotate_degrees
         self.translate = translate
@@ -53,6 +59,11 @@ class BreastCancerDataset(Dataset):
         self.v_flip_p = v_flip_p
         self.scale = scale
 
+        if self.train_val_test_split and self.num_images:
+            raise ValueError(
+                "Es dürfen nicht gleichzeit TrainValTestSplit und num_images gesetzt sein!"
+            )
+
         # Load metadata
         if meta_data is None and meta_data_csv_path is None:
             raise ValueError(
@@ -63,34 +74,46 @@ class BreastCancerDataset(Dataset):
         else:
             self.metaData = meta_data
 
+        self.__load()
+
+        # Define the transformations
+        self.transform_img = [
+            transforms.Resize(resize),
+            transforms.RandomVerticalFlip(v_flip_p),
+            transforms.RandomRotation(rotate_degrees, transforms.InterpolationMode.BILINEAR),
+            transforms.ToTensor(),
+            transforms.Lambda(lambda x: torch.cat([x, x, x], 0)),
+            transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
+        ]
+        self.transform_img = transforms.Compose(self.transform_img)
+
+    def __load(self):
+        if self.num_images:
+            self.__load_num_images()
+        else:
+            self.__load_train_val_test()
+
+    def __load_num_images(self):
+        num_not_cancer, num_skip_not_cancer, num_cancer, num_skip_cancer = self.num_images
+
+        not_cancer_df = self.metaData.loc[self.metaData['cancer'] == 0]
+        not_cancer_df = not_cancer_df[num_skip_not_cancer:num_skip_not_cancer + num_not_cancer]
+        cancer_df = self.metaData.loc[self.metaData['cancer'] == 1]
+        cancer_df = cancer_df[num_skip_cancer:num_skip_cancer + num_cancer]
+
+        self.metaData = pd.concat([not_cancer_df, cancer_df])
+
+    def __load_train_val_test(self):
         n_images = len(self.metaData)
-        train_end = int(n_images * train_val_test_split[0])
-        val_end = train_end + int(n_images * train_val_test_split[1])
+        train_end = int(n_images * self.train_val_test_split[0])
+        val_end = train_end + int(n_images * self.train_val_test_split[1])
+
         if self.split.value == DatasetSplit.TRAIN.value:
             self.metaData = self.metaData[:train_end]
         elif self.split.value == DatasetSplit.VAL.value:
             self.metaData = self.metaData[train_end:val_end]
         elif self.split.value == DatasetSplit.TEST.value:
             self.metaData = self.metaData[val_end:]
-
-        # Define the transformations
-        self.transform_img = [
-            transforms.Resize(resize),
-            # transforms.RandomRotation(rotate_degrees, transforms.InterpolationMode.BILINEAR),
-            # transforms.ColorJitter(brightness_factor, contrast_factor, saturation_factor),
-            # transforms.RandomHorizontalFlip(h_flip_p),
-            # transforms.RandomVerticalFlip(v_flip_p),
-            # transforms.RandomGrayscale(gray_p),
-            # transforms.RandomAffine(rotate_degrees,
-            #                         translate=(translate, translate),
-            #                         scale=(1.0 - scale, 1.0 + scale),
-            #                         interpolation=transforms.InterpolationMode.BILINEAR),
-            # transforms.CenterCrop(imagesize),
-            transforms.ToTensor(),
-            transforms.Lambda(lambda x: torch.cat([x, x, x], 0)),
-            transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
-        ]
-        self.transform_img = transforms.Compose(self.transform_img)
 
     def __len__(self):
         return len(self.metaData)
