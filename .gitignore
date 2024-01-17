@@ -19,3 +19,6 @@ venv/
 
 image*
 wandb
+/yolo_models/
+
+data.zip
