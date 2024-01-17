@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import os
 from enum import Enum
 from typing import Tuple
@@ -28,7 +26,7 @@ class BreastCancerDataset(Dataset):
                  resize=256,
                  imagesize=224,
                  split=DatasetSplit.TRAIN,
-                 train_val_test_split=(0.7, 0.2, 0.1),
+                 train_val_test_split: Tuple[float, float, float] | None = None,
                  num_images: Tuple[int, int, int, int] | None = None,
                  # (num_not_cancer, num_skip_not_cancer, num_cancer, num_skip_cancer)
                  rotate_degrees=0,
@@ -94,7 +92,7 @@ class BreastCancerDataset(Dataset):
             self.__load_train_val_test()
 
     def __load_num_images(self):
-        num_not_cancer, num_skip_not_cancer, num_cancer, num_skip_cancer = self.num_images
+        num_not_cancer, num_skip_not_cancer, num_cancer, num_skip_cancer = self.num_images[0]
 
         not_cancer_df = self.metaData.loc[self.metaData['cancer'] == 0]
         not_cancer_df = not_cancer_df[num_skip_not_cancer:num_skip_not_cancer + num_not_cancer]
