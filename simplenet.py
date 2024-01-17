@@ -426,7 +426,7 @@ class SimpleNet(torch.nn.Module):
             scores, segmentations, features, labels_gt, masks_gt = self.predict(test_data)
             auroc, full_pixel_auroc, pro, f1 = self._evaluate(test_data, scores, segmentations, features, labels_gt,
                                                           masks_gt)
-
+            del scores, segmentations, features, labels_gt, masks_gt
             if self.run:
                 self.run.log(
                     {

@@ -81,7 +81,7 @@ class BreastCancerDataset(Dataset):
             transforms.RandomRotation(rotate_degrees, transforms.InterpolationMode.BILINEAR),
             transforms.ToTensor(),
             transforms.Lambda(lambda x: torch.cat([x, x, x], 0)),
-            transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
+            # transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
         ]
         self.transform_img = transforms.Compose(self.transform_img)
 
@@ -149,3 +149,15 @@ class BreastCancerDataset(Dataset):
         padding = [int(l_pad), int(t_pad), int(r_pad), int(b_pad)]
 
         return padding
+
+if __name__ == '__main__':
+    train_ds = BreastCancerDataset(
+        img_dir="../data/cropped_voi_lut_rsna",
+        meta_data_csv_path="../train.csv",
+        num_images=(256, 0, 256, 0)
+    )
+    from matplotlib import pyplot as plt
+    for im in train_ds:
+        plt.imshow(im['image'].permute(1,2,0))
+        plt.show()
+        input()
