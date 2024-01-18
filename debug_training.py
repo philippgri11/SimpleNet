@@ -17,39 +17,31 @@ csv_file = os.environ['CSV_PATH']
 train_ds = BreastCancerDataset(
     img_dir=img_dir,
     meta_data_csv_path=csv_file,
-    num_images=(128, 0, 0, 0)
+    num_images=(512, 0, 0, 0)
 )
 
 val_ds = BreastCancerDataset(
     img_dir=img_dir,
     meta_data_csv_path=csv_file,
     split=DatasetSplit.VAL,
-    num_images=(64, 128, 16, 0)
-)
-
-test_ds = BreastCancerDataset(
-    img_dir=img_dir,
-    meta_data_csv_path=csv_file,
-    split=DatasetSplit.VAL,
-    num_images=(8, 0, 8, 0)
+    num_images=(32, 512, 8, 0)
 )
 
 train_loader = DataLoader(train_ds, batch_size=8, shuffle=True, pin_memory=True)
 val_loader = DataLoader(val_ds, batch_size=8, shuffle=False)
-test_loader = DataLoader(test_ds, batch_size=1, shuffle=False)
 
 backbone = backbones.load("resnet50")
 net = SimpleNet(device)
 net.load(
     backbone=backbone,
-    layers_to_extract_from=['layer2'],
+    layers_to_extract_from=['layer2', 'layer3'],
     device=device,
     input_shape=(3, 256, 256),
-    pretrain_embed_dimension=256,
-    target_embed_dimension=256,
+    pretrain_embed_dimension=64,
+    target_embed_dimension=64,
     patchsize=3,
     embedding_size=None,
-    meta_epochs=50,
+    meta_epochs=10,
     aed_meta_epochs=5,
     gan_epochs=3,
     noise_std=0.05,
@@ -71,5 +63,4 @@ net.set_model_dir(models_dir, dataset_name)
 
 net.train(train_loader, val_loader)
 scores, segmentations, features, labels_gt, masks_gt = net.predict(val_loader)
-print(scores)
 del scores, segmentations, features, labels_gt, masks_gt
