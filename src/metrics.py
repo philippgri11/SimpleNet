@@ -5,7 +5,7 @@ from sklearn import metrics
 
 
 def compute_imagewise_retrieval_metrics(
-    anomaly_prediction_weights, anomaly_ground_truth_labels, th=0.5
+        anomaly_prediction_weights, anomaly_ground_truth_labels, th=0.5
 ):
     """
     Computes retrieval statistics (AUROC, FPR, TPR).
@@ -22,22 +22,20 @@ def compute_imagewise_retrieval_metrics(
     # )
     fpr, tpr, thresholds = -1, -1, []
 
-    preds = anomaly_prediction_weights
-    preds[preds >= th] = 1
-    preds[preds < th] = 0
+    preds = np.where(np.array(anomaly_prediction_weights) >= th, 1, 0)
 
     f1_score = metrics.f1_score(anomaly_ground_truth_labels, preds)
-
+    mse = metrics.mean_squared_error(anomaly_ground_truth_labels, preds)
     auroc = metrics.roc_auc_score(
         anomaly_ground_truth_labels, anomaly_prediction_weights
     )
-    
+
     # precision, recall, _ = metrics.precision_recall_curve(
     #     anomaly_ground_truth_labels, anomaly_prediction_weights
     # )
     # auc_pr = metrics.auc(recall, precision)
-    
-    return {"auroc": auroc, "fpr": fpr, "tpr": tpr, "threshold": thresholds, "f1_score": f1_score}
+
+    return {"auroc": auroc, "fpr": fpr, "tpr": tpr, "threshold": thresholds, "f1_score": f1_score, "mse": mse}
 
 
 def compute_pixelwise_retrieval_metrics(anomaly_segmentations, ground_truth_masks):
@@ -93,8 +91,9 @@ def compute_pixelwise_retrieval_metrics(anomaly_segmentations, ground_truth_mask
 
 import pandas as pd
 from skimage import measure
-def compute_pro(masks, amaps, num_th=200):
 
+
+def compute_pro(masks, amaps, num_th=200):
     df = pd.DataFrame([], columns=["pro", "fpr", "threshold"])
     binary_amaps = np.zeros_like(amaps, dtype=np.bool)
 

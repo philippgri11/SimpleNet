@@ -52,7 +52,7 @@ net.load(
     proj_layer_type=1,
     mix_noise=1,
 )
-ckpt_path = "/Users/ksoll/Documents/git/SimpleNet/models/2024_01_18_19_52/rsna_breast_cancer/ckpt_epoch_10.pth"
+ckpt_path = "/Users/ksoll/Documents/git/SimpleNet/models/2024_01_18_20_22/rsna_breast_cancer/ckpt_epoch_5.pth"
 net.load_model(ckpt_path)
 
 scores, segmentations, features, labels_gt, masks_gt = net.predict(val_loader)
