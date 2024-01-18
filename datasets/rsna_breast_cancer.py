@@ -96,8 +96,10 @@ class BreastCancerDataset(Dataset):
 
         not_cancer_df = self.metaData.loc[self.metaData['cancer'] == 0]
         not_cancer_df = not_cancer_df[num_skip_not_cancer:num_skip_not_cancer + num_not_cancer]
+        not_cancer_df.sample(frac=1)
         cancer_df = self.metaData.loc[self.metaData['cancer'] == 1]
         cancer_df = cancer_df[num_skip_cancer:num_skip_cancer + num_cancer]
+        cancer_df = cancer_df.sample(frac=1)
 
         self.metaData = pd.concat([not_cancer_df, cancer_df])
 
