@@ -198,7 +198,6 @@ class SimpleNet(torch.nn.Module):
 
         self.model_dir = ""
         self.dataset_name = ""
-        self.tau = 1
         self.logger = None
 
     def set_model_dir(self, model_dir, dataset_name):
@@ -417,6 +416,11 @@ class SimpleNet(torch.nn.Module):
                 state_dict["pre_projection"] = OrderedDict({
                     k: v.detach().cpu()
                     for k, v in self.pre_projection.state_dict().items()})
+            if self.train_backbone:
+                state_dict["backbone"] = OrderedDict({
+                    k: v.detach().cpu()
+                    for k, v in self.backbone.state_dict().items()
+                })
 
         best_record = None
         for i_mepoch in range(self.meta_epochs):
@@ -425,7 +429,7 @@ class SimpleNet(torch.nn.Module):
 
             scores, segmentations, features, labels_gt, masks_gt = self.predict(test_data)
             auroc, full_pixel_auroc, pro, f1 = self._evaluate(test_data, scores, segmentations, features, labels_gt,
-                                                          masks_gt)
+                                                              masks_gt)
             del scores, segmentations, features, labels_gt, masks_gt
             if self.run:
                 self.run.log(
@@ -440,24 +444,30 @@ class SimpleNet(torch.nn.Module):
             self.logger.logger.add_scalar("pro", pro, i_mepoch)
             self.logger.logger.add_scalar("f1", f1, i_mepoch)
 
+            ckpt_path = os.path.join(self.ckpt_dir, f"ckpt_epoch_{i_mepoch}.pth")
             if best_record is None:
                 best_record = [auroc, full_pixel_auroc, pro, f1]
                 update_state_dict(state_dict)
+                torch.save(state_dict, ckpt_path)
             else:
-                if auroc > best_record[0]:
-                    best_record = [auroc, full_pixel_auroc, pro, f1]
+                if auroc > best_record[0] or f1 > best_record[3]:
+                    n_auroc = auroc if auroc > best_record[0] else best_record[0]
+                    n_f1 = f1 if f1 > best_record[3] else best_record[3]
+                    best_record = [n_auroc, full_pixel_auroc, pro, n_f1]
                     update_state_dict(state_dict)
+                    torch.save(state_dict, ckpt_path)
                 elif auroc == best_record[0] and full_pixel_auroc > best_record[1]:
                     best_record[1] = full_pixel_auroc
                     best_record[2] = pro
                     best_record[3] = f1
                     update_state_dict(state_dict)
+                    torch.save(state_dict, ckpt_path)
 
             print(f"----- {i_mepoch} I-AUROC:{round(auroc, 4)}(MAX:{round(best_record[0], 4)})"
                   f"  F1:{round(f1, 4)}(MAX:{round(best_record[3], 4)}) -----")
 
-            ckpt_path = os.path.join(self.ckpt_dir, f"ckpt_epoch_{i_mepoch}.pth")
-            torch.save(state_dict, ckpt_path)
+            # ckpt_path = os.path.join(self.ckpt_dir, f"ckpt_epoch_{i_mepoch}.pth")
+            # torch.save(state_dict, ckpt_path)
 
         ckpt_path = os.path.join(self.ckpt_dir, f"ckpt.pth")
         torch.save(state_dict, ckpt_path)
@@ -501,7 +511,15 @@ class SimpleNet(torch.nn.Module):
                         noise = (noise * noise_one_hot.unsqueeze(-1)).sum(1)
                         fake_feats = true_feats + noise
 
-                        scores = self.discriminator(torch.cat([true_feats, fake_feats]))
+                        disc_input = torch.cat([true_feats, fake_feats])
+
+                        # perm = torch.randperm(disc_input.shape[0], device=self.device)
+                        # inv = torch.empty_like(perm, device=self.device)
+                        # inv[perm] = torch.arange(perm.size(0), device=self.device)
+
+                        # disc_input = disc_input[perm]
+                        scores = self.discriminator(disc_input)
+                        # scores = scores[inv]
                         true_scores = scores[:len(true_feats)]
                         fake_scores = scores[len(fake_feats):]
 
@@ -640,6 +658,18 @@ class SimpleNet(torch.nn.Module):
         }
         with open(self._params_file(save_path, prepend), "wb") as save_file:
             pickle.dump(params, save_file, pickle.HIGHEST_PROTOCOL)
+
+    def load_model(self, ckpt_path):
+        if os.path.exists(ckpt_path):
+            state_dict = torch.load(ckpt_path, map_location=self.device)
+            if "backbone" in state_dict:
+                self.backbone.load_state_dict(state_dict["backbone"])
+            if 'discriminator' in state_dict:
+                self.discriminator.load_state_dict(state_dict['discriminator'])
+            if "pre_projection" in state_dict:
+                self.pre_projection.load_state_dict(state_dict["pre_projection"])
+            else:
+                self.load_state_dict(state_dict, strict=False)
 
     def save_segmentation_images(self, data, segmentations, scores):
         image_paths = [

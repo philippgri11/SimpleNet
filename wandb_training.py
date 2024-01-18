@@ -58,14 +58,14 @@ csv_file = os.environ['CSV_PATH']
 train_ds = BreastCancerDataset(
     img_dir=img_dir,
     meta_data_csv_path=csv_file,
-    train_val_test_split=(0.9, 0.1, 0)
+    num_images=(4096, 0, 0, 0)
 )
 
 val_ds = BreastCancerDataset(
     img_dir=img_dir,
     meta_data_csv_path=csv_file,
     split=DatasetSplit.VAL,
-    train_val_test_split=(0.9, 0.1, 0)
+    num_images=(1024, 4096, 128, 0)
 )
 
 sweep_id = wandb.sweep(sweep=sweep_configuration, project=os.environ['PROJECT_NAME'])
