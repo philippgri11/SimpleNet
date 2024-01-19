@@ -620,6 +620,7 @@ class SimpleNet(torch.nn.Module):
             )
             image_scores = image_scores.reshape(*image_scores.shape[:2], -1)
             image_scores = self.patch_maker.score(image_scores)
+            image_scores = image_scores.cpu().numpy()
 
             patch_scores = self.patch_maker.unpatch_scores(
                 patch_scores, batchsize=batchsize
