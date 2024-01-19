@@ -577,10 +577,9 @@ class SimpleNet(torch.nn.Module):
         """This function provides anomaly scores/maps for full dataloaders."""
         self.forward_modules.eval()
 
-        img_paths = []
         scores = []
         masks = []
-        features = []
+        # features = []
         labels_gt = []
         masks_gt = []
 
@@ -591,13 +590,12 @@ class SimpleNet(torch.nn.Module):
                     if data.get("mask", None) is not None:
                         masks_gt.extend(data["mask"].numpy().tolist())
                     image = data["image"]
-                    img_paths.extend(data['image_path'])
                 _scores, _masks, _feats = self._predict(image)
                 scores.extend(_scores)
                 masks.extend(_masks)
-                features.extend(_feats)
+                # features.extend(_feats)
 
-        return scores, masks, features, labels_gt, masks_gt
+        return scores, masks, None, labels_gt, masks_gt
 
     def _predict(self, images):
         """Infer score and mask for a batch of images."""
@@ -615,7 +613,7 @@ class SimpleNet(torch.nn.Module):
             if self.pre_proj > 0:
                 features = self.pre_projection(features)
 
-            patch_scores = image_scores = -self.discriminator(features).cpu().numpy()
+            patch_scores = image_scores = -self.discriminator(features)
 
             image_scores = self.patch_maker.unpatch_scores(
                 image_scores, batchsize=batchsize
