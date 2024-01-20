@@ -1,7 +1,7 @@
 import os
 from enum import Enum
 from typing import Tuple, List
-import matplotlib.pyplot as plt# Convert from tensor to PIL Image
+import matplotlib.pyplot as plt  # Convert from tensor to PIL Image
 from torchvision.transforms.functional import pad
 import pandas as pd
 from torch.utils.data import Dataset
@@ -24,21 +24,15 @@ class BreastCancerDataset(Dataset):
     def __init__(self, img_dir,
                  meta_data=None,
                  meta_data_csv_path=None,
-                 resize=(256,256),
+                 resize=(256, 256),
                  imagesize=224,
                  split=DatasetSplit.TRAIN,
                  train_val_test_split: Tuple[float, float, float] | None = None,
                  num_images: Tuple[int, int, int, int] | None = None,
                  # (num_not_cancer, num_skip_not_cancer, num_cancer, num_skip_cancer)
                  rotate_degrees=0,
-                 translate=0,
-                 brightness_factor=0,
-                 contrast_factor=0,
-                 saturation_factor=0,
-                 gray_p=0,
-                 h_flip_p=0,
                  v_flip_p=0,
-                 scale=0):
+                 ):
         super().__init__()
         self.img_dir = img_dir
         self.meta_data = meta_data
@@ -49,14 +43,6 @@ class BreastCancerDataset(Dataset):
         self.num_images = num_images,
         self.train_val_test_split = train_val_test_split
         self.rotate_degrees = rotate_degrees
-        self.translate = translate
-        self.brightness_factor = brightness_factor
-        self.contrast_factor = contrast_factor
-        self.saturation_factor = saturation_factor
-        self.gray_p = gray_p
-        self.h_flip_p = h_flip_p
-        self.v_flip_p = v_flip_p
-        self.scale = scale
 
         if self.train_val_test_split and self.num_images:
             raise ValueError(
@@ -91,6 +77,10 @@ class BreastCancerDataset(Dataset):
         else:
             self.__load_train_val_test()
 
+        self.metaData['image_path'] = self.metaData['patient_id'].astype(str) + "_" + self.metaData['image_id'].astype(
+            str) + ".png"
+        self.metaData['image_path'] = self.metaData['image_path'].apply(lambda img: os.path.join(self.img_dir, img))
+
     def __load_num_images(self):
         num_not_cancer, num_skip_not_cancer, num_cancer, num_skip_cancer = self.num_images[0]
 
@@ -119,16 +109,13 @@ class BreastCancerDataset(Dataset):
         return len(self.metaData)
 
     def __getitem__(self, idx):
-        patient_id = str(self.metaData.iloc[idx, 1])
-        image_id = str(self.metaData.iloc[idx, 2])
-        img_name = f"{patient_id}_{image_id}.png"
-        img_path = os.path.join(self.img_dir, img_name)
+        img_path = self.metaData.iloc[idx]['image_path']
         image = Image.open(img_path)
 
         image = pad(image, self.get_padding(image), fill=1)
         image = self.transform_img(image)
 
-        cancer = self.metaData.iloc[idx, 6]
+        cancer = self.metaData.iloc[idx]['cancer']
         return {
             "image": image,
             "classname": "",
@@ -137,9 +124,8 @@ class BreastCancerDataset(Dataset):
             "image_name": os.path.split(img_path)[-1],
             "image_path": img_path,
         }
-        # return image, cancer
 
-    def get_padding(self,image) -> List[int]:
+    def get_padding(self, image) -> List[int]:
         imsize = image.size
         h_padding = (self.resize[0] - imsize[0]) / 2
         v_padding = (self.resize[1] - imsize[1]) / 2
@@ -152,6 +138,7 @@ class BreastCancerDataset(Dataset):
 
         return padding
 
+
 if __name__ == '__main__':
     train_ds = BreastCancerDataset(
         img_dir="../data/cropped_voi_lut_rsna",
@@ -159,7 +146,8 @@ if __name__ == '__main__':
         num_images=(256, 0, 256, 0)
     )
     from matplotlib import pyplot as plt
+
     for im in train_ds:
-        plt.imshow(im['image'].permute(1,2,0))
+        plt.imshow(im['image'].permute(1, 2, 0))
         plt.show()
         input()
