@@ -81,10 +81,7 @@ class Projection(torch.nn.Module):
         self.apply(init_weight)
 
     def forward(self, x):
-
-        # x = .1 * self.layers(x) + x
-        x = self.layers(x)
-        return x
+        return self.layers(x)
 
 
 class TBWrapper:
@@ -113,19 +110,16 @@ class SimpleNet(torch.nn.Module):
             target_embed_dimension,  # 1536
             patchsize=3,  # 3
             patchstride=1,
-            embedding_size=None,  # 256
             meta_epochs=1,  # 40
             aed_meta_epochs=1,
             gan_epochs=1,  # 4
             noise_std=0.05,
             mix_noise=1,
-            noise_type="GAU",
             dsc_layers=2,  # 2
             dsc_hidden=None,  # 1024
             dsc_margin=.8,  # .5
             dsc_lr=0.0002,
             train_backbone=False,
-            auto_noise=0,
             cos_lr=False,
             lr=1e-3,
             pre_proj=0,  # 1
@@ -146,6 +140,7 @@ class SimpleNet(torch.nn.Module):
         feature_dimensions = feature_aggregator.feature_dimensions(input_shape)
         self.forward_modules["feature_aggregator"] = feature_aggregator
 
+        self.pretrain_embed_dimension = pretrain_embed_dimension
         preprocessing = common.Preprocessing(
             feature_dimensions, pretrain_embed_dimension
         )
@@ -164,7 +159,6 @@ class SimpleNet(torch.nn.Module):
             device=self.device, target_size=input_shape[-2:]
         )
 
-        self.embedding_size = embedding_size if embedding_size is not None else self.target_embed_dimension
         self.meta_epochs = meta_epochs
         self.lr = lr
         self.cos_lr = cos_lr
@@ -175,6 +169,7 @@ class SimpleNet(torch.nn.Module):
         self.aed_meta_epochs = aed_meta_epochs
 
         self.pre_proj = pre_proj
+        self.proj_layer_type = proj_layer_type
         if self.pre_proj > 0:
             self.pre_projection = Projection(self.target_embed_dimension, self.target_embed_dimension, pre_proj,
                                              proj_layer_type)
@@ -182,12 +177,12 @@ class SimpleNet(torch.nn.Module):
             self.proj_opt = torch.optim.AdamW(self.pre_projection.parameters(), lr * .1)
 
         # Discriminator
-        self.auto_noise = [auto_noise, None]
         self.dsc_lr = dsc_lr
         self.gan_epochs = gan_epochs
         self.mix_noise = mix_noise
-        self.noise_type = noise_type
         self.noise_std = noise_std
+        self.dsc_layers = dsc_layers
+        self.dsc_hidden = dsc_hidden
         self.discriminator = Discriminator(self.target_embed_dimension, n_layers=dsc_layers, hidden=dsc_hidden)
         self.discriminator.to(self.device)
         self.dsc_opt = torch.optim.Adam(self.discriminator.parameters(), lr=self.dsc_lr, weight_decay=1e-5)
@@ -283,7 +278,7 @@ class SimpleNet(torch.nn.Module):
 
         return features, patch_shapes
 
-    def test(self, training_data, test_data, save_segmentation_images):
+    def test(self, test_data, save_segmentation_images):
 
         ckpt_path = os.path.join(self.ckpt_dir, "models.ckpt")
         if os.path.exists(ckpt_path):
@@ -294,10 +289,10 @@ class SimpleNet(torch.nn.Module):
                 self.feature_dec.load_state_dict(state_dicts["pretrained_dec"])
 
         aggregator = {"scores": [], "segmentations": [], "features": []}
-        scores, segmentations, features, labels_gt, masks_gt = self.predict(test_data)
+        scores, segmentations, labels_gt, masks_gt = self.predict(test_data)
         aggregator["scores"].append(scores)
         aggregator["segmentations"].append(segmentations)
-        aggregator["features"].append(features)
+        # aggregator["features"].append(features)
 
         scores = np.array(aggregator["scores"])
         min_scores = scores.min(axis=-1).reshape(-1, 1)
@@ -341,13 +336,12 @@ class SimpleNet(torch.nn.Module):
 
         return auroc, full_pixel_auroc, f1
 
-    def _evaluate(self, test_data, scores, segmentations, features, labels_gt, masks_gt):
+    def _evaluate(self, scores, segmentations, labels_gt, masks_gt):
 
         scores = np.squeeze(np.array(scores))
         img_min_scores = scores.min(axis=-1)
         img_max_scores = scores.max(axis=-1)
         scores = (scores - img_min_scores) / (img_max_scores - img_min_scores + 1e-8)
-        # scores = np.mean(scores, axis=0)
 
         metrics_ = metrics.compute_imagewise_retrieval_metrics(
             scores, labels_gt, th=self.dsc_margin
@@ -427,10 +421,9 @@ class SimpleNet(torch.nn.Module):
 
             self._train_discriminator(training_data)
 
-            scores, segmentations, features, labels_gt, masks_gt = self.predict(test_data)
-            auroc, full_pixel_auroc, pro, f1 = self._evaluate(test_data, scores, segmentations, features, labels_gt,
-                                                              masks_gt)
-            del scores, segmentations, features, labels_gt, masks_gt
+            scores, segmentations, labels_gt, masks_gt = self.predict(test_data)
+            auroc, full_pixel_auroc, pro, f1 = self._evaluate(scores, segmentations, labels_gt, masks_gt)
+            del scores, segmentations, labels_gt, masks_gt
             if self.run:
                 self.run.log(
                     {
@@ -513,13 +506,7 @@ class SimpleNet(torch.nn.Module):
 
                         disc_input = torch.cat([true_feats, fake_feats])
 
-                        # perm = torch.randperm(disc_input.shape[0], device=self.device)
-                        # inv = torch.empty_like(perm, device=self.device)
-                        # inv[perm] = torch.arange(perm.size(0), device=self.device)
-
-                        # disc_input = disc_input[perm]
                         scores = self.discriminator(disc_input)
-                        # scores = scores[inv]
                         true_scores = scores[:len(true_feats)]
                         fake_scores = scores[len(fake_feats):]
 
@@ -550,9 +537,6 @@ class SimpleNet(torch.nn.Module):
 
                         train_set_bar.update(1)
 
-                    if len(embeddings_list) > 0:
-                        self.auto_noise[1] = torch.cat(embeddings_list).std(0).mean(-1)
-
                     if self.cos_lr:
                         self.dsc_schl.step()
 
@@ -568,18 +552,17 @@ class SimpleNet(torch.nn.Module):
                     gan_epoch_bar.set_description_str(pbar_str)
                     gan_epoch_bar.update(1)
 
-    def predict(self, data, prefix=""):
+    def predict(self, data):
         if isinstance(data, torch.utils.data.DataLoader):
-            return self._predict_dataloader(data, prefix)
+            return self._predict_dataloader(data)
         return self._predict(data)
 
-    def _predict_dataloader(self, dataloader, prefix):
+    def _predict_dataloader(self, dataloader):
         """This function provides anomaly scores/maps for full dataloaders."""
         self.forward_modules.eval()
 
         scores = []
         masks = []
-        # features = []
         labels_gt = []
         masks_gt = []
 
@@ -593,9 +576,8 @@ class SimpleNet(torch.nn.Module):
                 _scores, _masks, _feats = self._predict(image)
                 scores.extend(_scores)
                 masks.extend(_masks)
-                # features.extend(_feats)
 
-        return scores, masks, None, labels_gt, masks_gt
+        return scores, masks, labels_gt, masks_gt
 
     def _predict(self, images):
         """Infer score and mask for a batch of images."""
@@ -658,9 +640,39 @@ class SimpleNet(torch.nn.Module):
         with open(self._params_file(save_path, prepend), "wb") as save_file:
             pickle.dump(params, save_file, pickle.HIGHEST_PROTOCOL)
 
-    def load_model(self, ckpt_path):
-        if os.path.exists(ckpt_path):
-            state_dict = torch.load(ckpt_path, map_location=self.device)
+    def save_model_params(self):
+        with open(os.path.join(self.ckpt_dir, "params"), "w") as save_file:
+            params_dict = {
+                "layers_to_extract_from": self.layers_to_extract_from,
+                "input_shape": self.input_shape,
+                "pretrain_embed_dimension": self.pretrain_embed_dimension,
+                "target_embed_dimension": self.target_embed_dimension,
+                "patchsize": self.patch_maker.patchsize,
+                "patchstride": self.patch_maker.stride,
+                "meta_epochs": self.meta_epochs,
+                "aed_meta_epochs": self.aed_meta_epochs,
+                "gan_epochs": self.gan_epochs,
+                "noise_std": self.noise_std,
+                "mix_noise": self.mix_noise,
+                "dsc_layers": self.dsc_layers,
+                "dsc_hidden": self.dsc_hidden,
+                "dsc_margin": self.dsc_margin,
+                "dsc_lr": self.dsc_lr,
+                "train_backbone": self.train_backbone,
+                "cos_lr": self.cos_lr,
+                "lr": self.lr,
+                "pre_proj": self.pre_proj,
+                "proj_layer_type": self.proj_layer_type
+            }
+            save_file.write(str(params_dict))
+
+    def load_model(self, ckpt_dir, ckpt_name, backbone):
+        with open(os.path.join(ckpt_dir, "params"), "r") as save_file:
+            dict = save_file.read()
+        self.load(backbone=backbone, **eval(dict))
+        ckpt = os.path.join(ckpt_dir, ckpt_name)
+        if os.path.exists(ckpt):
+            state_dict = torch.load(ckpt, map_location=self.device)
             if "backbone" in state_dict:
                 self.backbone.load_state_dict(state_dict["backbone"])
             if 'discriminator' in state_dict:
@@ -739,7 +751,8 @@ class PatchMaker:
             return unfolded_features, number_of_total_patches
         return unfolded_features
 
-    def unpatch_scores(self, x, batchsize):
+    @staticmethod
+    def unpatch_scores(x, batchsize):
         return x.reshape(batchsize, -1, *x.shape[1:])
 
     def score(self, x):

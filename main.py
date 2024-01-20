@@ -92,8 +92,7 @@ def run(
             if not test:
                 i_auroc, p_auroc, pro_auroc = SimpleNet.train(dataloaders["training"], dataloaders["testing"])
             else:
-                i_auroc, p_auroc, pro_auroc = SimpleNet.test(dataloaders["training"], dataloaders["testing"],
-                                                             save_segmentation_images)
+                i_auroc, p_auroc, pro_auroc = SimpleNet.test(dataloaders["testing"], save_segmentation_images)
 
             result_collect.append(
                 {
