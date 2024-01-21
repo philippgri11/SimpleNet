@@ -349,6 +349,7 @@ class SimpleNet(torch.nn.Module):
 
         auroc = metrics_["auroc"]
         f1 = metrics_["f1_score"]
+        mse = metrics_["mse"]
 
         if len(masks_gt) > 0:
             segmentations = np.array(segmentations)
@@ -379,7 +380,7 @@ class SimpleNet(torch.nn.Module):
             full_pixel_auroc = -1
             pro = -1
 
-        return auroc, full_pixel_auroc, pro, f1
+        return auroc, full_pixel_auroc, pro, f1, mse
 
     def train(self, training_data, test_data):
 
@@ -422,13 +423,14 @@ class SimpleNet(torch.nn.Module):
             self._train_discriminator(training_data)
 
             scores, segmentations, labels_gt, masks_gt = self.predict(test_data)
-            auroc, full_pixel_auroc, pro, f1 = self._evaluate(scores, segmentations, labels_gt, masks_gt)
+            auroc, full_pixel_auroc, pro, f1, mse = self._evaluate(scores, segmentations, labels_gt, masks_gt)
             del scores, segmentations, labels_gt, masks_gt
             if self.run:
                 self.run.log(
                     {
-                        "Metrics/auroc": auroc,
-                        "Metrics/f1": f1,
+                        "auroc": auroc,
+                        "f1": f1,
+                        "mse": mse
                     }
                 )
 
@@ -458,9 +460,6 @@ class SimpleNet(torch.nn.Module):
 
             print(f"----- {i_mepoch} I-AUROC:{round(auroc, 4)}(MAX:{round(best_record[0], 4)})"
                   f"  F1:{round(f1, 4)}(MAX:{round(best_record[3], 4)}) -----")
-
-            # ckpt_path = os.path.join(self.ckpt_dir, f"ckpt_epoch_{i_mepoch}.pth")
-            # torch.save(state_dict, ckpt_path)
 
         ckpt_path = os.path.join(self.ckpt_dir, f"ckpt.pth")
         torch.save(state_dict, ckpt_path)
