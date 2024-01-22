@@ -3,6 +3,7 @@ import random
 from datetime import datetime
 
 import dotenv
+import torch.cuda
 from torch.utils.data import DataLoader
 
 import wandb
@@ -20,11 +21,11 @@ image_size = (3, 128, 128)
 
 def train(config=None):
     global train_ds, val_ds
-    with wandb.init(config=config, group='SimpleNet') as run:
+    with wandb.init(config=config, group='SimpleNetSingleRun') as run:
         config = wandb.config
 
-        train_loader = DataLoader(train_ds, batch_size=24, shuffle=True, pin_memory=True)
-        val_loader = DataLoader(val_ds, batch_size=24, shuffle=False)
+        train_loader = DataLoader(train_ds, batch_size=16, shuffle=True, pin_memory=True)
+        val_loader = DataLoader(val_ds, batch_size=16, shuffle=False)
 
         backbone = backbones.load(config.backbone['backbone_name'])
         net = SimpleNet(device, wandb_run=run)
@@ -57,6 +58,8 @@ def train(config=None):
         net.set_model_dir(models_dir, dataset_name)
 
         net.train(train_loader, val_loader)
+    del train_loader, val_loader, backbone, net
+    torch.cuda.empty_cache()
 
 
 img_dir = os.environ['IMAGE_DIR']
