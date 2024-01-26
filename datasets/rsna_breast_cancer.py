@@ -27,8 +27,8 @@ class BreastCancerDataset(Dataset):
                  resize=(256, 256),
                  imagesize=224,
                  split=DatasetSplit.TRAIN,
-                 train_val_test_split: Tuple[float, float, float] | None = None,
-                 num_images: Tuple[int, int, int, int] | None = None,
+                 train_val_test_split: Union[Tuple[float, float, float], None] = None,
+                 num_images: Union[Tuple[int, int, int, int], None] = None,
                  # (num_not_cancer, num_skip_not_cancer, num_cancer, num_skip_cancer)
                  rotate_degrees=0,
                  v_flip_p=0,
@@ -71,9 +71,7 @@ class BreastCancerDataset(Dataset):
             transforms.ToTensor(),
             transforms.Lambda(lambda x: x + torch.rand_like(x) * noise_std),
             transforms.Lambda(lambda x: torch.clip(x, 0, 1)),
-            transforms.Lambda(lambda x: torch.where(x < max_black/255., 0, x)),
             transforms.Lambda(lambda x: torch.cat([x, x, x], 0)),
-            # transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
         ]
         self.transform_img = transforms.Compose(self.transform_img)
 
