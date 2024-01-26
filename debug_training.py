@@ -17,7 +17,7 @@ csv_file = os.environ['CSV_PATH']
 train_ds = BreastCancerDataset(
     img_dir=img_dir,
     meta_data_csv_path=csv_file,
-    num_images=(64, 0, 0, 0),
+    num_images=(1, 0, 0, 0),
     rotate_degrees=5
 )
 
@@ -28,8 +28,8 @@ val_ds = BreastCancerDataset(
     num_images=(64, 64, 8, 0)
 )
 
-train_loader = DataLoader(train_ds, batch_size=32, shuffle=True, pin_memory=True)
-val_loader = DataLoader(val_ds, batch_size=32, shuffle=False)
+train_loader = DataLoader(train_ds, batch_size=1, shuffle=True, pin_memory=True)
+val_loader = DataLoader(val_ds, batch_size=1, shuffle=False)
 
 backbone = backbones.load("resnet50")
 net = SimpleNet(device)

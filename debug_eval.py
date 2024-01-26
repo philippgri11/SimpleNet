@@ -20,15 +20,15 @@ val_ds = BreastCancerDataset(
     img_dir=img_dir,
     meta_data_csv_path=csv_file,
     split=DatasetSplit.VAL,
-    num_images=(8192, 1152, 1030, 128)
+    num_images=(1024, 1152, 20, 128)
 )
 
-val_loader = DataLoader(val_ds, batch_size=32, shuffle=False)
+val_loader = DataLoader(val_ds, batch_size=12, shuffle=False)
 
 backbone = backbones.load("resnet50")
 net = SimpleNet(device)
-ckpt_path = "/Users/ksoll/Documents/git/SimpleNet/models/2024_01_20_02_34/rsna_breast_cancer"
-net.load_model(ckpt_path, "ckpt.pth", backbone)
+ckpt_path = "/Users/ksoll/Documents/git/SimpleNet/models/sunny-sweep-1/rsna_breast_cancer"
+net.load_model(ckpt_path, "ckpt_epoch_59.pth", backbone)
 
 scores, segmentations, labels_gt, masks_gt = net.predict(val_loader)
 scores = np.squeeze(np.array(scores))

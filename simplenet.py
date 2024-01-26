@@ -481,7 +481,6 @@ class SimpleNet(torch.nn.Module):
                 all_p_true = []
                 all_p_fake = []
                 all_p_interp = []
-                embeddings_list = []
                 with tqdm.tqdm(total=len(input_data), desc="train_set", leave=False, position=0) as train_set_bar:
                     for data_item in input_data:
                         self.dsc_opt.zero_grad()
@@ -530,6 +529,11 @@ class SimpleNet(torch.nn.Module):
                         self.dsc_opt.step()
 
                         loss = loss.detach().cpu()
+                        self.run.log({
+                            'loss': loss.item(),
+                            'true_loss': true_loss.mean().detach().cpu().item(),
+                            'fake_loss': fake_loss.mean().detach().cpu().item(),
+                        })
                         all_loss.append(loss.item())
                         all_p_true.append(p_true.cpu().item())
                         all_p_fake.append(p_fake.cpu().item())
@@ -611,7 +615,7 @@ class SimpleNet(torch.nn.Module):
             features = features.reshape(batchsize, scales[0], scales[1], -1)
             masks, features = self.anomaly_segmentor.convert_to_segmentation(patch_scores, features)
 
-        return list(image_scores), list(masks), list(features)
+        return list(image_scores), list(masks), None
 
     @staticmethod
     def _params_file(filepath, prepend=""):

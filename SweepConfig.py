@@ -30,27 +30,28 @@ from src.common import BackboneSetting
 # }
 
 sweep_configuration = {
-    'method': 'grid',
+    'method': 'bayes',
+    'metric': {'goal': 'maximize', 'name': 'auroc'},
     'name': 'HyperparameterSearch' + datetime.now().strftime("%d/%m/%Y, %H:%M"),
     'parameters': {
         'backbone': {'values': [dataclasses.asdict(BackboneSetting('resnet50', ['layer2', 'layer3']))]},
-        'pretrain_embed_dimension': {'value': 32},
-        'projection_dimension': {'value': 16},
-        'patch_size': {'value': 9},
+        'pretrain_embed_dimension': {'value': 256},
+        'projection_dimension': {'value': 512},
+        'patch_size': {'values': [3, 5]},
         'meta_epochs': {'value': 100},
         'aed_meta_epochs': {'value': 5},  # used for cos_lr scheduler, but needs to be an int allways
         'gan_epochs': {'value': 5},
-        'noise_std': {'value': 0.4},
+        'noise_std': {'values': [0.0001, 0.001, 0.01, 0.1]},
         'dsc_layers': {'value': 4},
-        'dsc_hidden': {'value': 8},
-        'dsc_margin': {'value': 0.25},
-        'dsc_lr': {'value': 0.05},  # LR for Discriminator
+        'dsc_hidden': {'value': 32},
+        'dsc_margin': {'values': [0.25, 0.5, 0.8]},
+        'dsc_lr': {'value': 0.001},  # LR for Discriminator
         'auto_noise': {'value': 0},  # scheint ein sinnloser Parameter zu sein
         'train_backbone': {'value': True},
         'cos_lr': {'value': True},
-        'lr': {'value': 0.05},  # LR for Projection and Backbone
-        'pre_proj': {'value': 1},  # Number of Layers for Projection
-        'proj_layer_type': {'value': 0},  # if > 1 then relu is added to all but the last layer of Projection
+        'lr': {'value': 0.001},  # LR for Projection and Backbone
+        'pre_proj': {'value': 2},  # Number of Layers for Projection
+        'proj_layer_type': {'value': 1},  # if > 1 then relu is added to all but the last layer of Projection
         'mix_noise': {'value': 1},
     }
 }

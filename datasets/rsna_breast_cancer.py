@@ -32,6 +32,8 @@ class BreastCancerDataset(Dataset):
                  # (num_not_cancer, num_skip_not_cancer, num_cancer, num_skip_cancer)
                  rotate_degrees=0,
                  v_flip_p=0,
+                 noise_std=0.01,
+                 max_black=100
                  ):
         super().__init__()
         self.img_dir = img_dir
@@ -63,9 +65,13 @@ class BreastCancerDataset(Dataset):
 
         # Define the transformations
         self.transform_img = [
+            transforms.Resize(self.resize),
             transforms.RandomVerticalFlip(v_flip_p),
             transforms.RandomRotation(rotate_degrees, transforms.InterpolationMode.BILINEAR),
             transforms.ToTensor(),
+            transforms.Lambda(lambda x: x + torch.rand_like(x) * noise_std),
+            transforms.Lambda(lambda x: torch.clip(x, 0, 1)),
+            transforms.Lambda(lambda x: torch.where(x < max_black/255., 0, x)),
             transforms.Lambda(lambda x: torch.cat([x, x, x], 0)),
             # transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
         ]
@@ -114,6 +120,7 @@ class BreastCancerDataset(Dataset):
 
         image = pad(image, self.get_padding(image), fill=1)
         image = self.transform_img(image)
+        print(image.max(), image.min(), image.mean())
 
         cancer = self.metaData.iloc[idx]['cancer']
         return {
@@ -141,9 +148,9 @@ class BreastCancerDataset(Dataset):
 
 if __name__ == '__main__':
     train_ds = BreastCancerDataset(
-        img_dir="../data/cropped_voi_lut_rsna",
+        img_dir="../data/rsna_breast_cancer",
         meta_data_csv_path="../train.csv",
-        num_images=(256, 0, 256, 0)
+        num_images=(1, 0, 1, 0)
     )
     from matplotlib import pyplot as plt
 

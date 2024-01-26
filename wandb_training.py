@@ -1,6 +1,5 @@
 import os
 import random
-from datetime import datetime
 
 import dotenv
 import torch.cuda
@@ -16,12 +15,12 @@ random.seed(42)
 
 dotenv.load_dotenv()
 device = 'cuda'
-image_size = (3, 128, 128)
+image_size = (3, 256, 256)
 
 
 def train(config=None):
     global train_ds, val_ds
-    with wandb.init(config=config, group='SimpleNetSingleRun') as run:
+    with wandb.init(config=config, group='HPO') as run:
         config = wandb.config
 
         train_loader = DataLoader(train_ds, batch_size=16, shuffle=True, pin_memory=True)
@@ -56,6 +55,7 @@ def train(config=None):
         models_dir = f'models/{run.name}'
         dataset_name = "rsna_breast_cancer"
         net.set_model_dir(models_dir, dataset_name)
+        net.save_model_params()
 
         net.train(train_loader, val_loader)
     del train_loader, val_loader, backbone, net
@@ -68,7 +68,7 @@ csv_file = os.environ['CSV_PATH']
 train_ds = BreastCancerDataset(
     img_dir=img_dir,
     meta_data_csv_path=csv_file,
-    num_images=(1024, 0, 0, 0),
+    num_images=(50000, 0, 0, 0),
     resize=image_size[1:]
 )
 
@@ -76,7 +76,7 @@ val_ds = BreastCancerDataset(
     img_dir=img_dir,
     meta_data_csv_path=csv_file,
     split=DatasetSplit.VAL,
-    num_images=(128, 1024, 128, 0),
+    num_images=(2048, 50000, 1024, 0),
     resize=image_size[1:]
 )
 
