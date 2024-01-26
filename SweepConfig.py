@@ -30,7 +30,7 @@ from src.common import BackboneSetting
 # }
 
 sweep_configuration = {
-    'method': 'bayes',
+    'method': 'grid',
     'metric': {'goal': 'maximize', 'name': 'auroc'},
     'name': 'HyperparameterSearch' + datetime.now().strftime("%d/%m/%Y, %H:%M"),
     'parameters': {

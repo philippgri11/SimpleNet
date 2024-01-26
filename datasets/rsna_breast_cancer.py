@@ -1,6 +1,6 @@
 import os
 from enum import Enum
-from typing import Tuple, List
+from typing import Tuple, List, Union
 import matplotlib.pyplot as plt  # Convert from tensor to PIL Image
 from torchvision.transforms.functional import pad
 import pandas as pd
@@ -116,9 +116,8 @@ class BreastCancerDataset(Dataset):
         img_path = self.metaData.iloc[idx]['image_path']
         image = Image.open(img_path)
 
-        image = pad(image, self.get_padding(image), fill=1)
+        # image = pad(image, self.get_padding(image), fill=1)
         image = self.transform_img(image)
-        print(image.max(), image.min(), image.mean())
 
         cancer = self.metaData.iloc[idx]['cancer']
         return {
