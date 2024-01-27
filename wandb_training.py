@@ -2,8 +2,12 @@ import os
 import random
 
 import dotenv
+import numpy as np
 import torch.cuda
+from sklearn.metrics import f1_score, roc_auc_score, mean_squared_error
+from torch import nn
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 import wandb
 from SweepConfig import sweep_configuration
@@ -15,24 +19,96 @@ random.seed(42)
 
 dotenv.load_dotenv()
 device = 'cuda'
-image_size = (3, 256, 256)
+
+CANCER_CNT = 1158
+
+
+def pretrain_backbone(backbone, run, train_loader, val_loader, epochs=10):
+    model = nn.Sequential(backbone, torch.nn.Linear(1000, 1, bias=False))
+    model.to(device).train()
+    loss_fn = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(model.parameters())
+    for epoch in range(epochs):
+        losses = []
+        for data in tqdm(train_loader):
+            images = data['image'].to(device)
+            labels = data['anomaly'].to(device)
+            optimizer.zero_grad()
+            output = model(images)
+            loss = loss_fn(output, labels)
+            loss.backward()
+            optimizer.step()
+            losses.append(loss.detach().cpu().item())
+        run.log({
+            'Loss/Backbone/pretrain_loss': sum(losses) / len(losses)
+        })
+
+        preds = []
+        labels_ = []
+        for data in tqdm(val_loader):
+            images = data['image'].to(device)
+            labels = data['anomaly'].to(device)
+            with torch.no_grad():
+                output = model(images)
+            preds.append(output)
+            labels_.append(labels)
+        preds = torch.cat(preds, dim=0).cpu().numpy()
+        preds = (preds - preds.min()) / (preds.max() - preds.min())
+        labels = torch.cat(labels_, dim=0).cpu().numpy()
+        preds_bin = np.where(preds >= 0.5, 1, 0)
+        f1 = f1_score(labels, preds_bin)
+        auc = roc_auc_score(labels, preds)
+        mse = mean_squared_error(labels, preds)
+        run.log({
+            'Metrics/Backbone/f1-score': f1,
+            'Metrics/Backbone/auc': auc,
+            'Metrics/Backbone/mse': mse
+        })
 
 
 def train(config=None):
-    global train_ds, val_ds
     with wandb.init(config=config, group='HPO') as run:
         config = wandb.config
+        cancer_skip = 0
+        if config.pretrain_backbone:
+            pretrain_ds = BreastCancerDataset(
+                img_dir=img_dir,
+                meta_data_csv_path=csv_file,
+                num_images=(4096, 0, 128, 0),
+                resize=config.image_size[1:]
+            )
+            cancer_skip = 128
+            pretrain_loader = DataLoader(pretrain_ds, batch_size=32, shuffle=True)
 
-        train_loader = DataLoader(train_ds, batch_size=16, shuffle=True, pin_memory=True)
-        val_loader = DataLoader(val_ds, batch_size=16, shuffle=False)
+        train_ds = BreastCancerDataset(
+            img_dir=img_dir,
+            meta_data_csv_path=csv_file,
+            num_images=(49452, 0, 0, 0),
+            resize=config.image_size[1:]
+        )
+
+        val_ds = BreastCancerDataset(
+            img_dir=img_dir,
+            meta_data_csv_path=csv_file,
+            split=DatasetSplit.VAL,
+            num_images=(4096, 49452, CANCER_CNT - cancer_skip, cancer_skip),
+            resize=config.image_size[1:]
+        )
+
+        train_loader = DataLoader(train_ds, batch_size=32, shuffle=True, pin_memory=True)
+        val_loader = DataLoader(val_ds, batch_size=32, shuffle=False)
 
         backbone = backbones.load(config.backbone['backbone_name'])
+
+        if config.pretrain_backbone:
+            pretrain_backbone(backbone, run, pretrain_loader, val_loader)
+
         net = SimpleNet(device, wandb_run=run)
         net.load(
             backbone=backbone,
             layers_to_extract_from=config.backbone['backbone_layers'],
             device=device,
-            input_shape=image_size,
+            input_shape=config.image_size,
             pretrain_embed_dimension=config.pretrain_embed_dimension,
             target_embed_dimension=config.projection_dimension,
             patchsize=config.patch_size,
@@ -57,28 +133,15 @@ def train(config=None):
         net.set_model_dir(models_dir, dataset_name)
         net.save_model_params()
 
+        run.watch(net)
         net.train(train_loader, val_loader)
+    run.unwatch(net)
     del train_loader, val_loader, backbone, net
     torch.cuda.empty_cache()
 
 
 img_dir = os.environ['IMAGE_DIR']
 csv_file = os.environ['CSV_PATH']
-
-train_ds = BreastCancerDataset(
-    img_dir=img_dir,
-    meta_data_csv_path=csv_file,
-    num_images=(50000, 0, 0, 0),
-    resize=image_size[1:]
-)
-
-val_ds = BreastCancerDataset(
-    img_dir=img_dir,
-    meta_data_csv_path=csv_file,
-    split=DatasetSplit.VAL,
-    num_images=(2048, 50000, 1024, 0),
-    resize=image_size[1:]
-)
 
 sweep_id = wandb.sweep(sweep=sweep_configuration, project=os.environ['PROJECT_NAME'])
 wandb.agent(sweep_id, function=train)

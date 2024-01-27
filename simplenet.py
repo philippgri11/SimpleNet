@@ -428,9 +428,9 @@ class SimpleNet(torch.nn.Module):
             if self.run:
                 self.run.log(
                     {
-                        "auroc": auroc,
-                        "f1": f1,
-                        "mse": mse
+                        "Metrics/SimpleNet/auc": auroc,
+                        "Metrics/SimpleNet/f1-score": f1,
+                        "Metrics/SimpleNet/mse": mse
                     }
                 )
 
@@ -478,6 +478,8 @@ class SimpleNet(torch.nn.Module):
         with tqdm.tqdm(total=self.gan_epochs, desc="gan_epochs") as gan_epoch_bar:
             for i_epoch in range(self.gan_epochs):
                 all_loss = []
+                all_true_loss = []
+                all_fake_loss = []
                 all_p_true = []
                 all_p_fake = []
                 all_p_interp = []
@@ -529,12 +531,9 @@ class SimpleNet(torch.nn.Module):
                         self.dsc_opt.step()
 
                         loss = loss.detach().cpu()
-                        self.run.log({
-                            'loss': loss.item(),
-                            'true_loss': true_loss.mean().detach().cpu().item(),
-                            'fake_loss': fake_loss.mean().detach().cpu().item(),
-                        })
                         all_loss.append(loss.item())
+                        all_true_loss.append(true_loss.detach().mean().cpu().item())
+                        all_fake_loss.append(fake_loss.detach().mean().cpu().item())
                         all_p_true.append(p_true.cpu().item())
                         all_p_fake.append(p_fake.cpu().item())
 
@@ -544,6 +543,8 @@ class SimpleNet(torch.nn.Module):
                         self.dsc_schl.step()
 
                     all_loss = sum(all_loss) / len(input_data)
+                    all_true_loss = sum(all_true_loss) / len(input_data)
+                    all_fake_loss = sum(all_fake_loss) / len(input_data)
                     all_p_true = sum(all_p_true) / len(input_data)
                     all_p_fake = sum(all_p_fake) / len(input_data)
                     cur_lr = self.dsc_opt.state_dict()['param_groups'][0]['lr']
@@ -554,6 +555,11 @@ class SimpleNet(torch.nn.Module):
                         pbar_str += f" p_interp:{round(sum(all_p_interp) / len(input_data), 3)}"
                     gan_epoch_bar.set_description_str(pbar_str)
                     gan_epoch_bar.update(1)
+                    self.run.log({
+                        'Metrics/SimpleNet/loss': all_loss,
+                        'Metrics/SimpleNet/true_loss': all_true_loss,
+                        'Metrics/SimpleNet/fake_loss': all_fake_loss,
+                    })
 
     def predict(self, data):
         if isinstance(data, torch.utils.data.DataLoader):
