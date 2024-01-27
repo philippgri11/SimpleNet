@@ -26,15 +26,17 @@ CANCER_CNT = 1158
 def pretrain_backbone(backbone, run, train_loader, val_loader, epochs=10):
     model = nn.Sequential(backbone, torch.nn.Linear(1000, 1, bias=False))
     model.to(device).train()
-    loss_fn = nn.CrossEntropyLoss()
+
+    loss_fn = nn.BCEWithLogitsLoss()
     optimizer = torch.optim.Adam(model.parameters())
     for epoch in range(epochs):
         losses = []
         for data in tqdm(train_loader):
             images = data['image'].to(device)
-            labels = data['anomaly'].to(device)
+            labels = data['anomaly'].to(device).float()
             optimizer.zero_grad()
             output = model(images)
+            output = torch.squeeze(output)
             loss = loss_fn(output, labels)
             loss.backward()
             optimizer.step()
