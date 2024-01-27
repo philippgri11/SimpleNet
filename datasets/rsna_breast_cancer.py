@@ -31,9 +31,9 @@ class BreastCancerDataset(Dataset):
                  num_images: Union[Tuple[int, int, int, int], None] = None,
                  # (num_not_cancer, num_skip_not_cancer, num_cancer, num_skip_cancer)
                  rotate_degrees=0,
-                 v_flip_p=0,
-                 noise_std=0.01,
-                 max_black=100
+                 v_flip_p=0.,
+                 h_flip_p=0.,
+                 noise_std=0.,
                  ):
         super().__init__()
         self.img_dir = img_dir
@@ -65,13 +65,15 @@ class BreastCancerDataset(Dataset):
 
         # Define the transformations
         self.transform_img = [
+            transforms.ToTensor(),
+            transforms.Lambda(lambda x: torch.cat([x, x, x], 0)),
             transforms.Resize(self.resize),
             transforms.RandomVerticalFlip(v_flip_p),
+            transforms.RandomHorizontalFlip(h_flip_p),
             transforms.RandomRotation(rotate_degrees, transforms.InterpolationMode.BILINEAR),
-            transforms.ToTensor(),
+            transforms.ColorJitter(brightness=(0.7, 1.), contrast=(0.7, 1.3)),
             transforms.Lambda(lambda x: x + torch.rand_like(x) * noise_std),
             transforms.Lambda(lambda x: torch.clip(x, 0, 1)),
-            transforms.Lambda(lambda x: torch.cat([x, x, x], 0)),
         ]
         self.transform_img = transforms.Compose(self.transform_img)
 
@@ -145,9 +147,13 @@ class BreastCancerDataset(Dataset):
 
 if __name__ == '__main__':
     train_ds = BreastCancerDataset(
-        img_dir="../data/rsna_breast_cancer",
+        img_dir="../data/cropped",
         meta_data_csv_path="../train.csv",
-        num_images=(1, 0, 1, 0)
+        num_images=(0, 0, 100, 0),
+        rotate_degrees=20,
+        noise_std=0.05,
+        v_flip_p=0.5,
+        h_flip_p=0.25
     )
     from matplotlib import pyplot as plt
 

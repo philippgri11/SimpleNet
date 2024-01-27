@@ -33,18 +33,18 @@ sweep_configuration = {
     'method': 'grid',
     'name': 'HyperparameterSearch' + datetime.now().strftime("%d/%m/%Y, %H:%M"),
     'parameters': {
-        'backbone': {'values': [dataclasses.asdict(BackboneSetting('resnet50', ['layer2', 'layer3']))]},
+        'backbone': {'values': [dataclasses.asdict(BackboneSetting('wideresnet50', ['layer2', 'layer3']))]},
         'pretrain_embed_dimension': {'value': 256},
         'projection_dimension': {'value': 512},
         'image_size': {'value': (3, 256, 256)},
-        'patch_size': {'values': [3]},
+        'patch_size': {'value': 3},
         'meta_epochs': {'value': 100},
         'aed_meta_epochs': {'value': 5},  # used for cos_lr scheduler, but needs to be an int allways
         'gan_epochs': {'value': 2},
-        'noise_std': {'values': [0.001, 0.01, 0.1]},
+        'noise_std': {'values': [0.005, 0.01, 0.1]},
         'dsc_layers': {'value': 4},
-        'dsc_hidden': {'value': 32},
-        'dsc_margin': {'values': [0.25, 0.5, 0.8]},
+        'dsc_hidden': {'value': 64},
+        'dsc_margin': {'value': 0.8},
         'dsc_lr': {'value': 0.001},  # LR for Discriminator
         'auto_noise': {'value': 0},  # scheint ein sinnloser Parameter zu sein
         'train_backbone': {'value': True},
