@@ -29,7 +29,7 @@ def pretrain_backbone(backbone, run, train_loader, val_loader, epochs=10):
 
     loss_fn = nn.BCEWithLogitsLoss()
     optimizer = torch.optim.Adam(model.parameters(), 0.01)
-    lr_lambda = lambda epoch: 0.9 * epoch
+    lr_lambda = lambda epoch: 0.9
     scheduler = torch.optim.lr_scheduler.MultiplicativeLR(optimizer, lr_lambda)
     for epoch in range(epochs):
         losses = []
@@ -79,15 +79,15 @@ def train(config=None):
             pretrain_ds = BreastCancerDataset(
                 img_dir=img_dir,
                 meta_data_csv_path=csv_file,
-                num_images=(4096, 0, 128, 0),
+                num_images=(4096, 0, 512, 0),
                 resize=config.image_size[1:],
                 rotate_degrees=20,
                 v_flip_p=0.5,
                 h_flip_p=0.25,
                 noise_std=0.05,
             )
-            cancer_skip = 128
-            pretrain_loader = DataLoader(pretrain_ds, batch_size=32, shuffle=True)
+            cancer_skip = 512
+            pretrain_loader = DataLoader(pretrain_ds, batch_size=8, shuffle=True)
 
         train_ds = BreastCancerDataset(
             img_dir=img_dir,
@@ -108,8 +108,8 @@ def train(config=None):
             resize=config.image_size[1:]
         )
 
-        train_loader = DataLoader(train_ds, batch_size=32, shuffle=True, pin_memory=True)
-        val_loader = DataLoader(val_ds, batch_size=32, shuffle=False)
+        train_loader = DataLoader(train_ds, batch_size=8, shuffle=True, pin_memory=True)
+        val_loader = DataLoader(val_ds, batch_size=8, shuffle=False)
 
         backbone = backbones.load(config.backbone['backbone_name'])
 
