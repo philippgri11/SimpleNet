@@ -7,20 +7,21 @@
 
 """detection methods."""
 import logging
+import math
 import os
 import pickle
+import random
 from collections import OrderedDict
 
-import math
 import numpy as np
 import torch
 import torch.nn.functional as F
 import tqdm
 from torch.utils.tensorboard import SummaryWriter
 
+import wandb
 from src import common, metrics
 from src.utils import plot_segmentation_images
-import wandb
 
 LOGGER = logging.getLogger(__name__)
 
@@ -422,7 +423,15 @@ class SimpleNet(torch.nn.Module):
 
             self._train_discriminator(training_data)
 
-            scores, segmentations, labels_gt, masks_gt = self.predict(test_data)
+            scores, segmentations, labels_gt, masks_gt, features = self.predict(test_data)
+            feature_map = np.array(features[random.randint(0, len(features) - 1)])
+            del features
+
+            feature_map = feature_map[:16]
+            ims = []
+            for feature in feature_map:
+                ims.append(wandb.Image(feature, mode="L"))
+
             auroc, full_pixel_auroc, pro, f1, mse = self._evaluate(scores, segmentations, labels_gt, masks_gt)
             del scores, segmentations, labels_gt, masks_gt
             if self.run:
@@ -430,7 +439,8 @@ class SimpleNet(torch.nn.Module):
                     {
                         "Metrics/SimpleNet/auc": auroc,
                         "Metrics/SimpleNet/f1-score": f1,
-                        "Metrics/SimpleNet/mse": mse
+                        "Metrics/SimpleNet/mse": mse,
+                        "Features/images": ims
                     }
                 )
 
@@ -571,6 +581,7 @@ class SimpleNet(torch.nn.Module):
         self.forward_modules.eval()
 
         scores = []
+        features = []
         masks = []
         labels_gt = []
         masks_gt = []
@@ -585,8 +596,9 @@ class SimpleNet(torch.nn.Module):
                 _scores, _masks, _feats = self._predict(image)
                 scores.extend(_scores)
                 masks.extend(_masks)
+                features.extend(_feats)
 
-        return scores, masks, labels_gt, masks_gt
+        return scores, masks, labels_gt, masks_gt, features
 
     def _predict(self, images):
         """Infer score and mask for a batch of images."""
@@ -621,7 +633,7 @@ class SimpleNet(torch.nn.Module):
             features = features.reshape(batchsize, scales[0], scales[1], -1)
             masks, features = self.anomaly_segmentor.convert_to_segmentation(patch_scores, features)
 
-        return list(image_scores), list(masks), None
+        return list(image_scores), list(masks), list(features)
 
     @staticmethod
     def _params_file(filepath, prepend=""):

@@ -23,11 +23,11 @@ device = 'cuda'
 CANCER_CNT = 1158
 
 
-def pretrain_backbone(backbone, run, train_loader, val_loader, epochs=10):
+def pretrain_backbone(backbone, run, train_loader, val_loader, epochs=10, pos_images=-1):
     model = nn.Sequential(backbone, torch.nn.Linear(1000, 1, bias=False))
     model.to(device).train()
 
-    loss_fn = nn.BCEWithLogitsLoss()
+    loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([pos_images / len(train_loader)]))
     optimizer = torch.optim.Adam(model.parameters(), 0.01)
     lr_lambda = lambda epoch: 0.9
     scheduler = torch.optim.lr_scheduler.MultiplicativeLR(optimizer, lr_lambda)
@@ -79,7 +79,7 @@ def train(config=None):
             pretrain_ds = BreastCancerDataset(
                 img_dir=img_dir,
                 meta_data_csv_path=csv_file,
-                num_images=(4096, 0, 512, 0),
+                num_images=(49452, 0, 512, 0),
                 resize=config.image_size[1:],
                 rotate_degrees=20,
                 v_flip_p=0.5,
@@ -114,7 +114,8 @@ def train(config=None):
         backbone = backbones.load(config.backbone['backbone_name'])
 
         if config.pretrain_backbone:
-            pretrain_backbone(backbone, run, pretrain_loader, val_loader)
+            pretrain_backbone(backbone, run, pretrain_loader, val_loader, epochs=config.pretrain_epochs,
+                              pos_images=cancer_skip)
 
         net = SimpleNet(device, wandb_run=run)
         net.load(
