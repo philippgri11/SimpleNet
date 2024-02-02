@@ -87,7 +87,7 @@ def train(config=None):
                 noise_std=0.05,
             )
             cancer_skip = 512
-            pretrain_loader = DataLoader(pretrain_ds, batch_size=8, shuffle=True)
+            pretrain_loader = DataLoader(pretrain_ds, batch_size=config.batch_size, shuffle=True)
 
         train_ds = BreastCancerDataset(
             img_dir=img_dir,
@@ -108,8 +108,8 @@ def train(config=None):
             resize=config.image_size[1:]
         )
 
-        train_loader = DataLoader(train_ds, batch_size=8, shuffle=True, pin_memory=True)
-        val_loader = DataLoader(val_ds, batch_size=8, shuffle=False)
+        train_loader = DataLoader(train_ds, batch_size=config.batch_size, shuffle=True, pin_memory=True)
+        val_loader = DataLoader(val_ds, batch_size=config.batch_size, shuffle=False)
 
         backbone = backbones.load(config.backbone['backbone_name'])
 
