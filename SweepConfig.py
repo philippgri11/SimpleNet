@@ -34,7 +34,7 @@ sweep_configuration = {
     'name': 'HyperparameterSearch' + datetime.now().strftime("%d/%m/%Y, %H:%M"),
     'parameters': {
         'backbone': {'values': [dataclasses.asdict(BackboneSetting('resnet50', ['layer2', 'layer3']))]},
-        'batch_size': {'value': 6},
+        'batch_size': {'value': 4},
         'pretrain_embed_dimension': {'value': 1024},
         'projection_dimension': {'value': 1024},
         'image_size': {'value': (3, 768, 768)},

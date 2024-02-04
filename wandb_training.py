@@ -28,7 +28,7 @@ def pretrain_backbone(backbone, run, train_loader, val_loader, epochs=10, pos_im
     model.to(device).train()
 
     loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([pos_images / len(train_loader)]).to(device))
-    optimizer = torch.optim.Adam(model.parameters(), 0.01)
+    optimizer = torch.optim.Adam(model.parameters(), 0.001)
     lr_lambda = lambda epoch: 0.9
     scheduler = torch.optim.lr_scheduler.MultiplicativeLR(optimizer, lr_lambda)
     for epoch in range(epochs):
