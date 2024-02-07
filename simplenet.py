@@ -520,7 +520,7 @@ class SimpleNet(torch.nn.Module):
 
                         scores = self.discriminator(disc_input)
                         if self.norm_disc_out:
-                            scores = torch.sigmoid(scores, -1)
+                            scores = torch.sigmoid(scores)
                         true_scores = scores[:len(true_feats)]
                         fake_scores = scores[len(fake_feats):]
 
