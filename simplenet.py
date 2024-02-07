@@ -125,6 +125,7 @@ class SimpleNet(torch.nn.Module):
             lr=1e-3,
             pre_proj=0,  # 1
             proj_layer_type=0,
+            norm_disc_out=False,
             **kwargs,
     ):
         self.backbone = backbone.to(self.device)
@@ -195,6 +196,7 @@ class SimpleNet(torch.nn.Module):
         self.model_dir = ""
         self.dataset_name = ""
         self.logger = None
+        self.norm_disc_out = norm_disc_out
 
     def set_model_dir(self, model_dir, dataset_name):
 
@@ -517,6 +519,8 @@ class SimpleNet(torch.nn.Module):
                         disc_input = torch.cat([true_feats, fake_feats])
 
                         scores = self.discriminator(disc_input)
+                        if self.norm_disc_out:
+                            scores = torch.sigmoid(scores, -1)
                         true_scores = scores[:len(true_feats)]
                         fake_scores = scores[len(fake_feats):]
 
@@ -565,11 +569,12 @@ class SimpleNet(torch.nn.Module):
                         pbar_str += f" p_interp:{round(sum(all_p_interp) / len(input_data), 3)}"
                     gan_epoch_bar.set_description_str(pbar_str)
                     gan_epoch_bar.update(1)
-                    self.run.log({
-                        'Metrics/SimpleNet/loss': all_loss,
-                        'Metrics/SimpleNet/true_loss': all_true_loss,
-                        'Metrics/SimpleNet/fake_loss': all_fake_loss,
-                    })
+                    if self.run:
+                        self.run.log({
+                            'Metrics/SimpleNet/loss': all_loss,
+                            'Metrics/SimpleNet/true_loss': all_true_loss,
+                            'Metrics/SimpleNet/fake_loss': all_fake_loss,
+                        })
 
     def predict(self, data):
         if isinstance(data, torch.utils.data.DataLoader):

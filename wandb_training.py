@@ -23,29 +23,46 @@ device = 'cuda'
 CANCER_CNT = 1158
 
 
-def pretrain_backbone(backbone, run, train_loader, val_loader, epochs=10, pos_images=-1):
+def pretrain_backbone(backbone, run, train_loader, val_loader, epochs=10, pos_images=-1, lr=0.001):
     model = nn.Sequential(backbone, torch.nn.Linear(1000, 1, bias=False))
     model.to(device).train()
 
-    loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([pos_images / len(train_loader)]).to(device))
-    optimizer = torch.optim.Adam(model.parameters(), 0.001)
+    if pos_images > 0:
+        loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([pos_images / len(train_loader)]).to(device))
+    else:
+        loss_fn = nn.BCEWithLogitsLoss()
+    optimizer = torch.optim.AdamW(model.parameters(), lr, weight_decay=5e-4)
     lr_lambda = lambda epoch: 0.9
     scheduler = torch.optim.lr_scheduler.MultiplicativeLR(optimizer, lr_lambda)
     for epoch in range(epochs):
         losses = []
+        preds = []
+        labels_ = []
         for data in tqdm(train_loader):
             images = data['image'].to(device)
             labels = data['anomaly'].to(device).float()
             optimizer.zero_grad()
             output = model(images)
+            preds.append(output)
+            labels_.append(labels)
             output = torch.squeeze(output)
             loss = loss_fn(output, labels)
             loss.backward()
             optimizer.step()
             scheduler.step()
             losses.append(loss.detach().cpu().item())
+        preds = torch.cat(preds, dim=0).cpu().numpy()
+        preds = (preds - preds.min()) / (preds.max() - preds.min())
+        labels = torch.cat(labels_, dim=0).cpu().numpy()
+        preds_bin = np.where(preds >= 0.5, 1, 0)
+        f1 = f1_score(labels, preds_bin)
+        auc = roc_auc_score(labels, preds)
+        mse = mean_squared_error(labels, preds)
         run.log({
-            'Loss/Backbone/pretrain_loss': sum(losses) / len(losses)
+            'Loss/Backbone/pretrain_loss': sum(losses) / len(losses),
+            'Metrics/Backbone/train/f1-score': f1,
+            'Metrics/Backbone/train/auc': auc,
+            'Metrics/Backbone/train/mse': mse
         })
 
         preds = []
@@ -65,9 +82,9 @@ def pretrain_backbone(backbone, run, train_loader, val_loader, epochs=10, pos_im
         auc = roc_auc_score(labels, preds)
         mse = mean_squared_error(labels, preds)
         run.log({
-            'Metrics/Backbone/f1-score': f1,
-            'Metrics/Backbone/auc': auc,
-            'Metrics/Backbone/mse': mse
+            'Metrics/Backbone/val/f1-score': f1,
+            'Metrics/Backbone/val/auc': auc,
+            'Metrics/Backbone/val/mse': mse
         })
 
 
@@ -79,33 +96,39 @@ def train(config=None):
             pretrain_ds = BreastCancerDataset(
                 img_dir=img_dir,
                 meta_data_csv_path=csv_file,
-                num_images=(49452, 0, 512, 0),
+                num_images=(256, 0, 256, 0),
                 resize=config.image_size[1:],
                 rotate_degrees=20,
                 v_flip_p=0.5,
                 h_flip_p=0.25,
                 noise_std=0.05,
+                brightness_range=(0.7, 1.),
+                contrast_range=(0.7, 1.3)
             )
-            cancer_skip = 512
+            cancer_skip = 256
             pretrain_loader = DataLoader(pretrain_ds, batch_size=config.batch_size, shuffle=True)
 
         train_ds = BreastCancerDataset(
             img_dir=img_dir,
             meta_data_csv_path=csv_file,
-            num_images=(49452, 0, 0, 0),
+            num_images=(256, 0, 0, 0),
             resize=config.image_size[1:],
             rotate_degrees=20,
             v_flip_p=0.5,
             h_flip_p=0.25,
             noise_std=0.05,
+            brightness_range=(0.7, 1.),
+            contrast_range=(0.7, 1.3)
         )
 
         val_ds = BreastCancerDataset(
             img_dir=img_dir,
             meta_data_csv_path=csv_file,
             split=DatasetSplit.VAL,
-            num_images=(4096, 49452, CANCER_CNT - cancer_skip, cancer_skip),
+            # num_images=(256, 256, CANCER_CNT - cancer_skip, cancer_skip),
+            num_images=(256, 256, 256, cancer_skip),
             resize=config.image_size[1:]
+
         )
 
         train_loader = DataLoader(train_ds, batch_size=config.batch_size, shuffle=True, pin_memory=True)
@@ -115,7 +138,7 @@ def train(config=None):
 
         if config.pretrain_backbone:
             pretrain_backbone(backbone, run, pretrain_loader, val_loader, epochs=config.pretrain_epochs,
-                              pos_images=cancer_skip)
+                              pos_images=cancer_skip, lr=config.pretrain_lr)
 
         net = SimpleNet(device, wandb_run=run)
         net.load(
@@ -126,7 +149,6 @@ def train(config=None):
             pretrain_embed_dimension=config.pretrain_embed_dimension,
             target_embed_dimension=config.projection_dimension,
             patchsize=config.patch_size,
-            embedding_size=None,
             meta_epochs=config.meta_epochs,
             aed_meta_epochs=config.aed_meta_epochs,
             gan_epochs=config.gan_epochs,
@@ -141,6 +163,7 @@ def train(config=None):
             pre_proj=config.pre_proj,
             proj_layer_type=config.proj_layer_type,
             mix_noise=config.mix_noise,
+            norm_disc_out=config.norm_disc_out
         )
         models_dir = f'models/{run.name}'
         dataset_name = "rsna_breast_cancer"

@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from sklearn.metrics import f1_score, roc_auc_score, mean_squared_error
 from torch import nn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, ConcatDataset
 from tqdm import tqdm
 
 from datasets.rsna_breast_cancer import BreastCancerDataset, DatasetSplit
@@ -55,7 +55,7 @@ def pretrain_backbone(backbone, train_loader, val_loader, epochs=10):
 
 
 dotenv.load_dotenv()
-device = 'cuda'
+device = 'mps'
 
 img_dir = os.environ['IMAGE_DIR']
 csv_file = os.environ['CSV_PATH']
@@ -63,7 +63,7 @@ csv_file = os.environ['CSV_PATH']
 pretrain_ds = BreastCancerDataset(
     img_dir=img_dir,
     meta_data_csv_path=csv_file,
-    num_images=(128, 0, 16, 0),
+    num_images=(128, 0, 128, 0),
     resize=(128, 128),
     rotate_degrees=20,
     v_flip_p=0.5,
@@ -74,7 +74,7 @@ pretrain_ds = BreastCancerDataset(
 train_ds = BreastCancerDataset(
     img_dir=img_dir,
     meta_data_csv_path=csv_file,
-    num_images=(128, 128, 0, 0),
+    num_images=(128, 0, 0, 0),
     resize=(128, 128),
     rotate_degrees=20,
     v_flip_p=0.5,
@@ -82,46 +82,62 @@ train_ds = BreastCancerDataset(
     noise_std=0.05,
 )
 
-val_ds = BreastCancerDataset(
+val_ds_healthy = BreastCancerDataset(
     img_dir=img_dir,
     meta_data_csv_path=csv_file,
     split=DatasetSplit.VAL,
-    num_images=(128, 256, 16, 16),
+    num_images=(128, 128, 0, 0),
     resize=(128, 128)
 )
+val_ds_cancer = BreastCancerDataset(
+    img_dir=img_dir,
+    meta_data_csv_path=csv_file,
+    split=DatasetSplit.VAL,
+    num_images=(0, 0, 128, 128),
+    resize=(128, 128),
+    rotate_degrees=0,
+    v_flip_p=0.,
+    h_flip_p=0.,
+    noise_std=0.0,
+    contrast_range=(1.0, 1.0),
+    brightness_range=(1.0, 1.0)
+)
 
-train_loader = DataLoader(train_ds, batch_size=1, shuffle=True, pin_memory=True)
-val_loader = DataLoader(val_ds, batch_size=1, shuffle=False)
-pretrain_loader = DataLoader(pretrain_ds, batch_size=1, shuffle=True)
+val_ds = ConcatDataset([val_ds_healthy, val_ds_cancer])
 
-backbone = backbones.load("wideresnet50")
+train_loader = DataLoader(train_ds, batch_size=32, shuffle=True, pin_memory=True)
+val_loader = DataLoader(val_ds, batch_size=32, shuffle=False)
+pretrain_loader = DataLoader(pretrain_ds, batch_size=32, shuffle=True)
 
-pretrain_backbone(backbone, pretrain_loader, val_loader)
+backbone = backbones.load("resnet50")
+
+#pretrain_backbone(backbone, pretrain_loader, val_loader)
 
 net = SimpleNet(device)
 net.load(
     backbone=backbone,
-    layers_to_extract_from=['layer3'],
+    layers_to_extract_from=['layer2', 'layer3'],
     device=device,
-    input_shape=(3, 256, 256),
-    pretrain_embed_dimension=128,
-    target_embed_dimension=128,
+    input_shape=(3, 128, 128),
+    pretrain_embed_dimension=512,
+    target_embed_dimension=512,
     patchsize=3,
     embedding_size=None,
-    meta_epochs=1,
+    meta_epochs=100,
     aed_meta_epochs=1,
-    gan_epochs=1,
+    gan_epochs=5,
     noise_std=0.01,
-    dsc_layers=2,
-    dsc_hidden=64,
+    dsc_layers=7,
+    dsc_hidden=32,
     dsc_margin=0.5,
-    dsc_lr=0.001,
+    dsc_lr=0.005,
     train_backbone=True,
     cos_lr=False,
-    lr=0.001,
+    lr=0.005,
     pre_proj=1,
     proj_layer_type=1,
     mix_noise=1,
+    norm_disc_out=False
 )
 models_dir = f'models/{datetime.now().strftime("%Y_%m_%d_%H_%M")}'
 dataset_name = "rsna_breast_cancer"

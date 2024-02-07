@@ -34,6 +34,8 @@ class BreastCancerDataset(Dataset):
                  v_flip_p=0.,
                  h_flip_p=0.,
                  noise_std=0.,
+                 brightness_range=(1., 1.),
+                 contrast_range=(1., 1.)
                  ):
         super().__init__()
         self.img_dir = img_dir
@@ -71,7 +73,7 @@ class BreastCancerDataset(Dataset):
             transforms.RandomVerticalFlip(v_flip_p),
             transforms.RandomHorizontalFlip(h_flip_p),
             transforms.RandomRotation(rotate_degrees, transforms.InterpolationMode.BILINEAR),
-            transforms.ColorJitter(brightness=(0.7, 1.), contrast=(0.7, 1.3)),
+            transforms.ColorJitter(brightness=brightness_range, contrast=contrast_range),
             transforms.Lambda(lambda x: x + torch.rand_like(x) * noise_std),
             transforms.Lambda(lambda x: torch.clip(x, 0, 1)),
         ]
