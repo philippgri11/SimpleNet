@@ -1,5 +1,6 @@
 import dataclasses
 from datetime import datetime
+
 from src.common import BackboneSetting
 
 # sweep_configuration = {
@@ -57,6 +58,7 @@ sweep_configuration = {
         'pretrain_backbone': {'values': [True, False]},
         'pretrain_epochs': {'value': 25},
         'norm_disc_out': {'values': [True, False]},
-        'pretrain_lr': {'value': 0.001}
+        'pretrain_lr': {'value': 0.001},
+        'pretrain_epochs_out_layer': {'value': 10}
     }
 }

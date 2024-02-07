@@ -23,7 +23,7 @@ device = 'cuda'
 CANCER_CNT = 1158
 
 
-def pretrain_backbone(backbone, run, train_loader, val_loader, epochs=10, pos_images=-1, lr=0.001):
+def pretrain_backbone(backbone, run, train_loader, val_loader, pre_epochs_out_layer=5, epochs=10, pos_images=-1, lr=0.001):
     model = nn.Sequential(backbone, torch.nn.Linear(1000, 1, bias=False))
     model.to(device).train()
 
@@ -31,10 +31,26 @@ def pretrain_backbone(backbone, run, train_loader, val_loader, epochs=10, pos_im
         loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([pos_images / len(train_loader)]).to(device))
     else:
         loss_fn = nn.BCEWithLogitsLoss()
+
     optimizer = torch.optim.AdamW(model.parameters(), lr, weight_decay=5e-4)
     lr_lambda = lambda epoch: 0.9
     scheduler = torch.optim.lr_scheduler.MultiplicativeLR(optimizer, lr_lambda)
-    for epoch in range(epochs):
+
+    for epoch in range(epochs + pre_epochs_out_layer):
+
+        if epoch < pre_epochs_out_layer:
+            # Einfrieren aller Backbone-Layer
+            for param in model[0].parameters():
+                param.requires_grad = False
+        else:
+            # Entfrieren aller Backbone-Layer
+            if epoch == pre_epochs_out_layer:
+                # Optimierer neu initialisieren, um die entfrorenen Parameter zu berücksichtigen
+                optimizer = torch.optim.AdamW(model.parameters(), lr, weight_decay=5e-4)
+                scheduler = torch.optim.lr_scheduler.MultiplicativeLR(optimizer, lr_lambda=lambda epoch: 0.9)
+            for param in model[0].parameters():
+                param.requires_grad = True
+
         losses = []
         preds = []
         labels_ = []
@@ -63,7 +79,7 @@ def pretrain_backbone(backbone, run, train_loader, val_loader, epochs=10, pos_im
             'Metrics/Backbone/train/f1-score': f1,
             'Metrics/Backbone/train/auc': auc,
             'Metrics/Backbone/train/mse': mse
-        })
+        }, commit=False)
 
         preds = []
         labels_ = []
@@ -138,7 +154,7 @@ def train(config=None):
 
         if config.pretrain_backbone:
             pretrain_backbone(backbone, run, pretrain_loader, val_loader, epochs=config.pretrain_epochs,
-                              pos_images=cancer_skip, lr=config.pretrain_lr)
+                              pos_images=cancer_skip, lr=config.pretrain_lr, pre_epochs_out_layer=config.pretrain_epochs_out_layer)
 
         net = SimpleNet(device, wandb_run=run)
         net.load(
