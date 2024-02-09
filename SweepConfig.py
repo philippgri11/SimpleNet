@@ -35,16 +35,16 @@ sweep_configuration = {
     'name': 'HyperparameterSearch' + datetime.now().strftime("%d/%m/%Y, %H:%M"),
     'parameters': {
         'backbone': {'values': [dataclasses.asdict(BackboneSetting('resnet50', ['layer2', 'layer3']))]},
-        'batch_size': {'value': 16},
+        'batch_size': {'value': 8},
         'pretrain_embed_dimension': {'value': 512},
-        'projection_dimension': {'value': 256},
+        'projection_dimension': {'value': 512},
         'image_size': {'value': (3, 256, 256)},
         'patch_size': {'value': 3},
         'meta_epochs': {'value': 40},
         'aed_meta_epochs': {'value': 1},  # used for cos_lr scheduler, but needs to be an int allways
         'gan_epochs': {'value': 4},
-        'noise_std': {'values': [0, 0.001, 0.005, 0.01, 0.05, 0.1, 0.25, 0.5, 1]},
-        'dsc_layers': {'value': 5},
+        'noise_std': {'values': [0, 0.001, 0.01, 0.1, 1]},
+        'dsc_layers': {'value': 3},
         'dsc_hidden': {'value': 128},
         'dsc_margin': {'value': 0.5},
         'dsc_lr': {'value': 0.001},  # LR for Discriminator
@@ -53,11 +53,10 @@ sweep_configuration = {
         'cos_lr': {'value': True},
         'lr': {'value': 0.001},  # LR for Projection and Backbone
         'pre_proj': {'value': 3},  # Number of Layers for Projection
-        'proj_layer_type': {'value': 1},  # if > 1 then relu is added to all but the last layer of Projection
+        'proj_layer_type': {'value': 9999},  # if > 1 then relu is added to all but the last layer of Projection
         'mix_noise': {'value': 1},
-        'pretrain_backbone': {'values': [True, False]},
+        'pretrain_backbone': {'values': False},
         'pretrain_epochs': {'value': 25},
-        'norm_disc_out': {'values': [True, False]},
         'pretrain_lr': {'value': 0.001},
         'pretrain_epochs_out_layer': {'value': 10}
     }

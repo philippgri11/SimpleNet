@@ -18,7 +18,11 @@ from src import backbones
 random.seed(42)
 
 dotenv.load_dotenv()
-device = 'cuda'
+device = 'cpu'
+if torch.cuda.is_available():
+    device = 'cuda'
+if torch.backends.mps.is_available():
+    device = 'mps'
 
 CANCER_CNT = 1158
 
@@ -105,14 +109,14 @@ def pretrain_backbone(backbone, run, train_loader, val_loader, pre_epochs_out_la
 
 
 def train(config=None):
-    with wandb.init(config=config, group='HPO') as run:
+    with wandb.init(config=config, group='Noise_With_TrainDs_As_ValDs') as run:
         config = wandb.config
         cancer_skip = 0
         if config.pretrain_backbone:
             pretrain_ds = BreastCancerDataset(
                 img_dir=img_dir,
                 meta_data_csv_path=csv_file,
-                num_images=(256, 0, 256, 0),
+                num_images=(64, 0, 64, 0),
                 resize=config.image_size[1:],
                 rotate_degrees=20,
                 v_flip_p=0.5,
@@ -121,13 +125,13 @@ def train(config=None):
                 brightness_range=(0.7, 1.),
                 contrast_range=(0.7, 1.3)
             )
-            cancer_skip = 256
+            cancer_skip = 64
             pretrain_loader = DataLoader(pretrain_ds, batch_size=config.batch_size, shuffle=True)
 
         train_ds = BreastCancerDataset(
             img_dir=img_dir,
             meta_data_csv_path=csv_file,
-            num_images=(256, 0, 0, 0),
+            num_images=(64, 0, 0, 0),
             resize=config.image_size[1:],
             rotate_degrees=20,
             v_flip_p=0.5,
@@ -142,9 +146,8 @@ def train(config=None):
             meta_data_csv_path=csv_file,
             split=DatasetSplit.VAL,
             # num_images=(256, 256, CANCER_CNT - cancer_skip, cancer_skip),
-            num_images=(256, 256, 256, cancer_skip),
+            num_images=(64, 0, 64, 0),
             resize=config.image_size[1:]
-
         )
 
         train_loader = DataLoader(train_ds, batch_size=config.batch_size, shuffle=True, pin_memory=True)
@@ -179,7 +182,6 @@ def train(config=None):
             pre_proj=config.pre_proj,
             proj_layer_type=config.proj_layer_type,
             mix_noise=config.mix_noise,
-            norm_disc_out=config.norm_disc_out
         )
         models_dir = f'models/{run.name}'
         dataset_name = "rsna_breast_cancer"

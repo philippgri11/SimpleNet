@@ -55,7 +55,11 @@ def pretrain_backbone(backbone, train_loader, val_loader, epochs=10):
 
 
 dotenv.load_dotenv()
-device = 'mps'
+device = 'cpu'
+if torch.cuda.is_available():
+    device = 'cuda'
+if torch.backends.mps.is_available():
+    device = 'mps'
 
 img_dir = os.environ['IMAGE_DIR']
 csv_file = os.environ['CSV_PATH']
@@ -98,7 +102,7 @@ val_ds_cancer = BreastCancerDataset(
     rotate_degrees=0,
     v_flip_p=0.,
     h_flip_p=0.,
-    noise_std=0.0,
+    noise_std=0.5,
     contrast_range=(1.0, 1.0),
     brightness_range=(1.0, 1.0)
 )
@@ -137,7 +141,7 @@ net.load(
     pre_proj=1,
     proj_layer_type=1,
     mix_noise=1,
-    norm_disc_out=False
+    norm_disc_out=False,
 )
 models_dir = f'models/{datetime.now().strftime("%Y_%m_%d_%H_%M")}'
 dataset_name = "rsna_breast_cancer"

@@ -571,9 +571,9 @@ class SimpleNet(torch.nn.Module):
                     gan_epoch_bar.update(1)
                     if self.run:
                         self.run.log({
-                            'Metrics/SimpleNet/loss': all_loss,
-                            'Metrics/SimpleNet/true_loss': all_true_loss,
-                            'Metrics/SimpleNet/fake_loss': all_fake_loss,
+                            'Loss/SimpleNet/loss': all_loss,
+                            'Loss/SimpleNet/true_loss': all_true_loss,
+                            'Loss/SimpleNet/fake_loss': all_fake_loss,
                         })
 
     def predict(self, data):
