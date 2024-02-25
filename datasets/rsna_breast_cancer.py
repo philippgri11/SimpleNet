@@ -1,14 +1,11 @@
 import os
 from enum import Enum
 from typing import Tuple, List, Union
-import matplotlib.pyplot as plt  # Convert from tensor to PIL Image
-from torchvision.transforms.functional import pad
 import pandas as pd
 from torch.utils.data import Dataset
 from PIL import Image
 from torchvision import transforms
 import torch
-from torchvision.transforms import functional_pil
 
 IMAGENET_MEAN = [0.485]
 IMAGENET_STD = [0.229]
@@ -149,13 +146,14 @@ class BreastCancerDataset(Dataset):
 
 if __name__ == '__main__':
     train_ds = BreastCancerDataset(
-        img_dir="../data/cropped",
-        meta_data_csv_path="../train.csv",
+        img_dir="../data/rsna_pp/1024",
+        meta_data_csv_path="../train_small.csv",
         num_images=(0, 0, 100, 0),
         rotate_degrees=20,
-        noise_std=0.05,
+        noise_std=0.25,
         v_flip_p=0.5,
-        h_flip_p=0.25
+        h_flip_p=0.25,
+        resize=(1024, 1024)
     )
     from matplotlib import pyplot as plt
 

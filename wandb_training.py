@@ -116,27 +116,27 @@ def train(config=None):
             pretrain_ds = BreastCancerDataset(
                 img_dir=img_dir,
                 meta_data_csv_path=csv_file,
-                num_images=(64, 0, 64, 0),
+                num_images=(128, 0, 128, 0),
                 resize=config.image_size[1:],
                 rotate_degrees=20,
                 v_flip_p=0.5,
                 h_flip_p=0.25,
-                noise_std=0.05,
+                noise_std=0.25,
                 brightness_range=(0.7, 1.),
                 contrast_range=(0.7, 1.3)
             )
-            cancer_skip = 64
+            cancer_skip = 128
             pretrain_loader = DataLoader(pretrain_ds, batch_size=config.batch_size, shuffle=True)
 
         train_ds = BreastCancerDataset(
             img_dir=img_dir,
             meta_data_csv_path=csv_file,
-            num_images=(64, 0, 0, 0),
+            num_images=(128, 0, 0, 0),
             resize=config.image_size[1:],
             rotate_degrees=20,
             v_flip_p=0.5,
             h_flip_p=0.25,
-            noise_std=0.05,
+            noise_std=0.25,
             brightness_range=(0.7, 1.),
             contrast_range=(0.7, 1.3)
         )
@@ -146,7 +146,7 @@ def train(config=None):
             meta_data_csv_path=csv_file,
             split=DatasetSplit.VAL,
             # num_images=(256, 256, CANCER_CNT - cancer_skip, cancer_skip),
-            num_images=(64, 0, 64, 0),
+            num_images=(128, 0, 128, 0),
             resize=config.image_size[1:]
         )
 

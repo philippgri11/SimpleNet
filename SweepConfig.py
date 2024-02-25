@@ -46,7 +46,7 @@ sweep_configuration = {
         'noise_std': {'values': [0, 0.001, 0.01, 0.1, 1]},
         'dsc_layers': {'value': 3},
         'dsc_hidden': {'value': 128},
-        'dsc_margin': {'value': 0.5},
+        'dsc_margin': {'value': 0.8},
         'dsc_lr': {'value': 0.001},  # LR for Discriminator
         'auto_noise': {'value': 0},  # scheint ein sinnloser Parameter zu sein
         'train_backbone': {'value': True},
