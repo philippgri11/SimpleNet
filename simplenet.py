@@ -123,6 +123,7 @@ class SimpleNet(torch.nn.Module):
             train_backbone=False,
             cos_lr=False,
             lr=1e-3,
+            pre_proj_lr=1e-3,
             pre_proj=0,  # 1
             proj_layer_type=0,
             norm_disc_out=False,
@@ -172,11 +173,12 @@ class SimpleNet(torch.nn.Module):
 
         self.pre_proj = pre_proj
         self.proj_layer_type = proj_layer_type
+        self.pre_proj_lr = pre_proj_lr
         if self.pre_proj > 0:
             self.pre_projection = Projection(self.target_embed_dimension, self.target_embed_dimension, pre_proj,
                                              proj_layer_type)
             self.pre_projection.to(self.device)
-            self.proj_opt = torch.optim.AdamW(self.pre_projection.parameters(), lr * .1)
+            self.proj_opt = torch.optim.AdamW(self.pre_projection.parameters(), pre_proj_lr)
 
         # Discriminator
         self.dsc_lr = dsc_lr
@@ -687,6 +689,7 @@ class SimpleNet(torch.nn.Module):
                 "train_backbone": self.train_backbone,
                 "cos_lr": self.cos_lr,
                 "lr": self.lr,
+                "pre_proj_lr": self.pre_proj_lr,
                 "pre_proj": self.pre_proj,
                 "proj_layer_type": self.proj_layer_type
             }
