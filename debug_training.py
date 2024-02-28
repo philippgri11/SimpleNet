@@ -1,59 +1,16 @@
 import os
-from datetime import datetime
 import random
+from datetime import datetime
 
 import dotenv
-import numpy as np
 import torch
-from sklearn.metrics import f1_score, roc_auc_score, mean_squared_error
-from torch import nn
 from torch.utils.data import DataLoader, ConcatDataset
-from tqdm import tqdm
 
 from datasets.rsna_breast_cancer import BreastCancerDataset, DatasetSplit
 from simplenet import SimpleNet
 from src import backbones
+
 random.seed(42)
-
-
-def pretrain_backbone(backbone, train_loader, val_loader, epochs=10):
-    model = nn.Sequential(backbone, torch.nn.Linear(1000, 1, bias=False))
-    model.to(device).train()
-
-    loss_fn = nn.BCEWithLogitsLoss()
-    optimizer = torch.optim.Adam(model.parameters(), 0.01)
-    lr_lambda = lambda epoch: 0.9 * epoch
-    scheduler = torch.optim.lr_scheduler.MultiplicativeLR(optimizer, lr_lambda)
-    for epoch in range(epochs):
-        losses = []
-        for data in tqdm(train_loader):
-            images = data['image'].to(device)
-            labels = data['anomaly'].to(device).float()
-            optimizer.zero_grad()
-            output = model(images)
-            output = torch.squeeze(output)
-            loss = loss_fn(output, labels)
-            loss.backward()
-            optimizer.step()
-            scheduler.step()
-            losses.append(loss.detach().cpu().item())
-
-        preds = []
-        labels_ = []
-        for data in tqdm(val_loader):
-            images = data['image'].to(device)
-            labels = data['anomaly'].to(device)
-            with torch.no_grad():
-                output = model(images)
-            preds.append(output)
-            labels_.append(labels)
-        preds = torch.cat(preds, dim=0).cpu().numpy()
-        preds = (preds - preds.min()) / (preds.max() - preds.min())
-        labels = torch.cat(labels_, dim=0).cpu().numpy()
-        preds_bin = np.where(preds >= 0.5, 1, 0)
-        f1 = f1_score(labels, preds_bin)
-        auc = roc_auc_score(labels, preds)
-        mse = mean_squared_error(labels, preds)
 
 
 dotenv.load_dotenv()
@@ -66,22 +23,11 @@ if torch.backends.mps.is_available():
 img_dir = os.environ['IMAGE_DIR']
 csv_file = os.environ['CSV_PATH']
 
-pretrain_ds = BreastCancerDataset(
-    img_dir=img_dir,
-    meta_data_csv_path=csv_file,
-    num_images=(128, 0, 128, 0),
-    resize=(128, 128),
-    rotate_degrees=20,
-    v_flip_p=0.5,
-    h_flip_p=0.25,
-    noise_std=0.05,
-)
-
 train_ds = BreastCancerDataset(
     img_dir=img_dir,
     meta_data_csv_path=csv_file,
     num_images=(128, 0, 0, 0),
-    resize=(256, 256),
+    resize=(64, 64),
 )
 
 val_ds_healthy = BreastCancerDataset(
@@ -89,7 +35,7 @@ val_ds_healthy = BreastCancerDataset(
     meta_data_csv_path=csv_file,
     split=DatasetSplit.VAL,
     num_images=(128, 128, 0, 0),
-    resize=(256, 256)
+    resize=(64, 64)
 )
 
 val_ds_cancer = BreastCancerDataset(
@@ -97,7 +43,7 @@ val_ds_cancer = BreastCancerDataset(
     meta_data_csv_path=csv_file,
     split=DatasetSplit.VAL,
     num_images=(0, 0, 128, 128),
-    resize=(256, 256),
+    resize=(64, 64),
 )
 
 val_ds = ConcatDataset([val_ds_healthy, val_ds_cancer])
@@ -107,14 +53,12 @@ val_loader = DataLoader(val_ds, batch_size=8, shuffle=False)
 
 backbone = backbones.load("resnet50")
 
-#pretrain_backbone(backbone, pretrain_loader, val_loader)
-
 net = SimpleNet(device)
 net.load(
     backbone=backbone,
     layers_to_extract_from=['layer1'],
     device=device,
-    input_shape=(3, 256, 256),
+    input_shape=(3, 64, 64),
     pretrain_embed_dimension=576,
     target_embed_dimension=576,
     patchsize=3,
@@ -128,7 +72,7 @@ net.load(
     dsc_margin=0.5,
     dsc_lr=0.005,
     pre_proj_lr=0.0001,
-    train_backbone=True,
+    train_backbone=False,
     cos_lr=False,
     lr=0.005,
     pre_proj=1,
