@@ -34,7 +34,7 @@ sweep_configuration = {
     'method': 'grid',
     'name': 'HyperparameterSearch' + datetime.now().strftime("%d/%m/%Y, %H:%M"),
     'parameters': {
-        'backbone': {'values': [dataclasses.asdict(BackboneSetting('resnet50', ['layer2', 'layer3']))]},
+        'backbone': {'value': dataclasses.asdict(BackboneSetting('resnet50', ['layer2', 'layer3']))},
         'batch_size': {'value': 8},
         'pretrain_embed_dimension': {'value': 512},
         'projection_dimension': {'value': 512},
@@ -55,7 +55,7 @@ sweep_configuration = {
         'pre_proj': {'value': 3},  # Number of Layers for Projection
         'proj_layer_type': {'value': 9999},  # if > 1 then relu is added to all but the last layer of Projection
         'mix_noise': {'value': 1},
-        'pretrain_backbone': {'values': False},
+        'pretrain_backbone': {'value': False},
         'pretrain_epochs': {'value': 25},
         'pretrain_lr': {'value': 0.001},
         'pretrain_epochs_out_layer': {'value': 10}
