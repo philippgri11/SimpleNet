@@ -11,7 +11,7 @@ sweep_configuration = {
         'batch_size': {'value': 8},
         'pretrain_embed_dimension': {'value': 576},
         'projection_dimension': {'value': 576},
-        'image_size': {'value': (3, 64, 64)},
+        'image_size': {'value': (3, 256, 256)},
         'patch_size': {'value': 3},
         'meta_epochs': {'value': 40},
         'aed_meta_epochs': {'value': 1},  # used for cos_lr scheduler, but needs to be an int allways

@@ -29,7 +29,7 @@ def train(config=None):
         train_ds = BreastCancerDataset(
             img_dir=img_dir,
             meta_data_csv_path=csv_file,
-            num_images=(256, 0, 0, 0),
+            num_images=(2048, 0, 0, 0),
             resize=config.image_size[1:],
         )
 
@@ -37,7 +37,7 @@ def train(config=None):
             img_dir=img_dir,
             meta_data_csv_path=csv_file,
             split=DatasetSplit.VAL,
-            num_images=(256, 256, 256, 0),
+            num_images=(256, 2048, 256, 0),
             resize=config.image_size[1:]
         )
 
