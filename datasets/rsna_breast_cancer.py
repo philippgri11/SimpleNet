@@ -90,8 +90,11 @@ class BreastCancerDataset(Dataset):
         num_not_cancer, num_skip_not_cancer, num_cancer, num_skip_cancer = self.num_images[0]
 
         not_cancer_df = self.metaData.loc[self.metaData['cancer'] == 0]
+        not_cancer_df = not_cancer_df.loc[self.metaData['difficult_negative_case'] == False]
+        print(len(not_cancer_df))
         not_cancer_df = not_cancer_df[num_skip_not_cancer:num_skip_not_cancer + num_not_cancer]
         not_cancer_df.sample(frac=1)
+
         cancer_df = self.metaData.loc[self.metaData['cancer'] == 1]
         cancer_df = cancer_df[num_skip_cancer:num_skip_cancer + num_cancer]
         cancer_df = cancer_df.sample(frac=1)
@@ -146,14 +149,16 @@ class BreastCancerDataset(Dataset):
 
 if __name__ == '__main__':
     train_ds = BreastCancerDataset(
-        img_dir="../data/rsna_pp/1024",
-        meta_data_csv_path="../train_small.csv",
+        img_dir="../data/rsna_breast_cancer",
+        meta_data_csv_path="../train.csv",
         num_images=(0, 0, 100, 0),
+        resize=(256, 256),
         rotate_degrees=20,
-        noise_std=0.25,
         v_flip_p=0.5,
         h_flip_p=0.25,
-        resize=(1024, 1024)
+        noise_std=0.25,
+        brightness_range=(0.7, 1.),
+        contrast_range=(0.7, 1.3)
     )
     from matplotlib import pyplot as plt
 
