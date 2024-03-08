@@ -91,7 +91,6 @@ class BreastCancerDataset(Dataset):
 
         not_cancer_df = self.metaData.loc[self.metaData['cancer'] == 0]
         not_cancer_df = not_cancer_df.loc[self.metaData['difficult_negative_case'] == False]
-        print(len(not_cancer_df))
         not_cancer_df = not_cancer_df[num_skip_not_cancer:num_skip_not_cancer + num_not_cancer]
         not_cancer_df.sample(frac=1)
 

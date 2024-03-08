@@ -3,7 +3,6 @@ import cv2
 import numpy as np
 from sklearn import metrics
 
-
 def compute_imagewise_retrieval_metrics(
         anomaly_prediction_weights, anomaly_ground_truth_labels, th=0.5
 ):
@@ -29,13 +28,28 @@ def compute_imagewise_retrieval_metrics(
     auroc = metrics.roc_auc_score(
         anomaly_ground_truth_labels, anomaly_prediction_weights
     )
+    confusion_matrix = metrics.ConfusionMatrixDisplay.from_predictions(anomaly_ground_truth_labels, preds, display_labels=["Healthy", "Cancer"]).im_
+    accuracy = metrics.accuracy_score(anomaly_ground_truth_labels, preds)
+    precision = metrics.precision_score(anomaly_ground_truth_labels, preds)
+    recall = metrics.recall_score(anomaly_ground_truth_labels, preds)
 
     # precision, recall, _ = metrics.precision_recall_curve(
     #     anomaly_ground_truth_labels, anomaly_prediction_weights
     # )
     # auc_pr = metrics.auc(recall, precision)
 
-    return {"auroc": auroc, "fpr": fpr, "tpr": tpr, "threshold": thresholds, "f1_score": f1_score, "mse": mse}
+    return {
+        "auroc": auroc,
+        "fpr": fpr,
+        "tpr": tpr,
+        "threshold": thresholds,
+        "f1_score": f1_score,
+        "mse": mse,
+        "confusion_matrix": confusion_matrix,
+        "accuracy": accuracy,
+        "precision": precision,
+        "recall": recall
+    }
 
 
 def compute_pixelwise_retrieval_metrics(anomaly_segmentations, ground_truth_masks):

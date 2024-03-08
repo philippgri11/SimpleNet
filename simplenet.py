@@ -17,6 +17,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import tqdm
+from matplotlib import pyplot as plt
 from torch.utils.tensorboard import SummaryWriter
 
 import wandb
@@ -127,11 +128,15 @@ class SimpleNet(torch.nn.Module):
             pre_proj=0,  # 1
             proj_layer_type=0,
             norm_disc_out=False,
+            log_features=False,
+            log_scores=False,
             **kwargs,
     ):
         self.backbone = backbone.to(self.device)
         self.layers_to_extract_from = layers_to_extract_from
         self.input_shape = input_shape
+        self.log_features = log_features
+        self.log_scores = log_scores
 
         self.patch_maker = PatchMaker(patchsize, stride=patchstride)
 
@@ -355,6 +360,10 @@ class SimpleNet(torch.nn.Module):
         auroc = metrics_["auroc"]
         f1 = metrics_["f1_score"]
         mse = metrics_["mse"]
+        confusion_matrix = metrics_["confusion_matrix"]
+        accuracy = metrics_["accuracy"]
+        precision = metrics_["precision"]
+        recall = metrics_["recall"]
 
         if len(masks_gt) > 0:
             segmentations = np.array(segmentations)
@@ -385,7 +394,7 @@ class SimpleNet(torch.nn.Module):
             full_pixel_auroc = -1
             pro = -1
 
-        return auroc, full_pixel_auroc, pro, f1, mse
+        return auroc, full_pixel_auroc, pro, f1, mse, confusion_matrix, accuracy, precision, recall
 
     def train(self, training_data, test_data):
 
@@ -428,24 +437,52 @@ class SimpleNet(torch.nn.Module):
             self._train_discriminator(training_data)
 
             scores, segmentations, labels_gt, masks_gt, features = self.predict(test_data)
-            feature_map = np.array(features[random.randint(0, len(features) - 1)])
-            del features
 
-            feature_map = feature_map[:16]
-            ims = []
-            for feature in feature_map:
-                ims.append(wandb.Image(feature, mode="L"))
+            if self.log_scores:
+                heatmaps = np.array(segmentations)
+                ims = []
+                for batch in test_data:
+                    images = batch["image"]
+                    for i in range(images.shape[0]):  # Gehe durch jedes Bild im Batch
+                        image = images[i].cpu().numpy().transpose((1,2,0))
+                        heatmap = heatmaps[i]
+                        normed_heatmap = (heatmap - np.min(heatmap)) / (np.max(heatmap) - np.min(heatmap))
+                        colored_heatmap = plt.get_cmap('jet')(normed_heatmap)[:, :, :3]
+                        overlayed_image = colored_heatmap * 0.5 + image * 0.5
+                        overlayed_image = np.clip(overlayed_image, 0,1)
+                        ims.append(wandb.Image(overlayed_image, mode="RGB"))
+                    break
+                wandb.log({
+                    "Images/ScoreMaps": ims
+                }, commit=False)
 
-            auroc, full_pixel_auroc, pro, f1, mse = self._evaluate(scores, segmentations, labels_gt, masks_gt)
+            if self.run and self.log_features:
+                feature_map = np.array(features[random.randint(0, len(features) - 1)])
+                del features
+                feature_map = feature_map[:24]
+                ims = []
+                for feature in feature_map:
+                    ims.append(wandb.Image(feature, mode="L"))
+                self.run.log(
+                    {
+                        "Images/Features": ims,
+                    }, commit=False
+                )
+
+            evaluations = self._evaluate(scores, segmentations, labels_gt, masks_gt)
+            auroc, full_pixel_auroc, pro, f1, mse, confusion_matrix, accuracy, precision, recall = evaluations
             del scores, segmentations, labels_gt, masks_gt
             if self.run:
                 self.run.log(
                     {
-                        "Metrics/SimpleNet/auc": auroc,
-                        "Metrics/SimpleNet/f1-score": f1,
-                        "Metrics/SimpleNet/mse": mse,
-                        "Features/images": ims
-                    }
+                        "Metrics/auc": auroc,
+                        "Metrics/f1-score": f1,
+                        "Metrics/mse": mse,
+                        "Metrics/Confusion Matrix": wandb.Image(confusion_matrix),
+                        "Metrics/Accuracy": accuracy,
+                        "Metrics/Precision": precision,
+                        "Metrics/Recall": recall
+                    }, commit=True
                 )
 
             self.logger.logger.add_scalar("i-auroc", auroc, i_mepoch)
@@ -573,9 +610,9 @@ class SimpleNet(torch.nn.Module):
                     gan_epoch_bar.update(1)
                     if self.run:
                         self.run.log({
-                            'Loss/SimpleNet/loss': all_loss,
-                            'Loss/SimpleNet/true_loss': all_true_loss,
-                            'Loss/SimpleNet/fake_loss': all_fake_loss,
+                            'Loss/loss': all_loss,
+                            'Loss/true_loss': all_true_loss,
+                            'Loss/fake_loss': all_fake_loss,
                         })
 
     def predict(self, data):
@@ -639,6 +676,8 @@ class SimpleNet(torch.nn.Module):
             patch_scores = patch_scores.reshape(batchsize, scales[0], scales[1])
             features = features.reshape(batchsize, scales[0], scales[1], -1)
             masks, features = self.anomaly_segmentor.convert_to_segmentation(patch_scores, features)
+            if not self.log_features:
+                features = []
 
         return list(image_scores), list(masks), list(features)
 

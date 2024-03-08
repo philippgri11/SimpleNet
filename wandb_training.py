@@ -24,7 +24,7 @@ CANCER_CNT = 1158
 
 
 def train(config=None):
-    with wandb.init(config=config, group='ResNetNativeResolution') as run:
+    with wandb.init(config=config, group='Metriken') as run:
         config = wandb.config
 
         train_ds = BreastCancerDataset(
@@ -72,6 +72,8 @@ def train(config=None):
             pre_proj_lr=config.pre_proj_lr,
             mix_noise=config.mix_noise,
             lr=config.lr,
+            log_features=True,
+            log_scores=True
         )
         models_dir = f'models/{run.name}'
         dataset_name = "rsna_breast_cancer"
