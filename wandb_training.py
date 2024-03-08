@@ -72,7 +72,7 @@ def train(config=None):
             pre_proj_lr=config.pre_proj_lr,
             mix_noise=config.mix_noise,
             lr=config.lr,
-            log_features=True,
+            log_features=False,
             log_scores=True
         )
         models_dir = f'models/{run.name}'

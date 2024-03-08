@@ -440,20 +440,33 @@ class SimpleNet(torch.nn.Module):
 
             if self.log_scores:
                 heatmaps = np.array(segmentations)
-                ims = []
+                cancer_ims = []
+                healthy_ims = []
                 for batch in test_data:
                     images = batch["image"]
+                    isCancer = batch["is_anomaly"]
                     for i in range(images.shape[0]):  # Gehe durch jedes Bild im Batch
                         image = images[i].cpu().numpy().transpose((1,2,0))
+                        im_class = int(isCancer[i].cpu())
+                        if len(cancer_ims) >= 8 and im_class:
+                            continue
+                        if len(healthy_ims) >= 8 and not im_class:
+                            continue
+                        if len(cancer_ims) >= 8 and len(healthy_ims) >= 8:
+                            break
+
                         heatmap = heatmaps[i]
                         normed_heatmap = (heatmap - np.min(heatmap)) / (np.max(heatmap) - np.min(heatmap))
                         colored_heatmap = plt.get_cmap('jet')(normed_heatmap)[:, :, :3]
                         overlayed_image = colored_heatmap * 0.5 + image * 0.5
-                        overlayed_image = np.clip(overlayed_image, 0,1)
-                        ims.append(wandb.Image(overlayed_image, mode="RGB"))
-                    break
+                        overlayed_image = np.clip(overlayed_image, 0, 1)
+                        if im_class:
+                            cancer_ims.append(wandb.Image(overlayed_image, mode="RGB"))
+                        else:
+                            healthy_ims.append(wandb.Image(overlayed_image, mode="RGB"))
                 wandb.log({
-                    "Images/ScoreMaps": ims
+                    "Images/ScoreMaps Cancer": cancer_ims,
+                    "Images/ScoreMaps Healthy": healthy_ims
                 }, commit=False)
 
             if self.run and self.log_features:
