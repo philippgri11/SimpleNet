@@ -24,13 +24,13 @@ CANCER_CNT = 1158
 
 
 def train(config=None):
-    with wandb.init(config=config, group='BigBossTraining') as run:
+    with wandb.init(config=config, group='ResNetNativeResolution') as run:
         config = wandb.config
 
         train_ds = BreastCancerDataset(
             img_dir=img_dir,
             meta_data_csv_path=csv_file,
-            num_images=(40000, 0, 0, 0),
+            num_images=(2048, 0, 0, 0),
             resize=config.image_size[1:],
         )
 
@@ -38,7 +38,7 @@ def train(config=None):
             img_dir=img_dir,
             meta_data_csv_path=csv_file,
             split=DatasetSplit.VAL,
-            num_images=(5843, 40000, 1158, 0),
+            num_images=(1158, 1024, 1158, 0),
             resize=config.image_size[1:]
         )
 
