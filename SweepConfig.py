@@ -16,10 +16,10 @@ sweep_configuration = {
         'meta_epochs': {'value': 50},
         'aed_meta_epochs': {'value': 1},  # used for cos_lr scheduler, but needs to be an int allways
         'gan_epochs': {'value': 5},
-        'noise_std': {'values': [0.01, 0.015, 0.02]},
+        'noise_std': {'value': 0.015},
         'dsc_layers': {'value': 2},
         'dsc_hidden': {'value': 512},
-        'dsc_margin': {'value': 0.5},
+        'dsc_margin': {'values': [.8, .3, .5]},
         'dsc_lr': {'value': 0.0002},  # LR for Discriminator
         'pre_proj_lr': {'value': 0.0001},
         'auto_noise': {'value': 0},  # scheint ein sinnloser Parameter zu sein
