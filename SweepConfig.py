@@ -14,18 +14,18 @@ sweep_configuration = {
         'image_size': {'value': (3, 224, 224)},
         'patch_size': {'value': 3},
         'meta_epochs': {'value': 50},
-        'aed_meta_epochs': {'value': 1},  # used for cos_lr scheduler, but needs to be an int allways
+        'aed_meta_epochs': {'value': 5},  # used for cos_lr scheduler, but needs to be an int allways
         'gan_epochs': {'value': 5},
         'noise_std': {'value': 0.015},
         'dsc_layers': {'value': 2},
         'dsc_hidden': {'value': 512},
-        'dsc_margin': {'values': [.8, .3, .5]},
+        'dsc_margin': {'value': .3},
         'dsc_lr': {'value': 0.0002},  # LR for Discriminator
         'pre_proj_lr': {'value': 0.0001},
         'auto_noise': {'value': 0},  # scheint ein sinnloser Parameter zu sein
-        'train_backbone': {'value': False},
-        'cos_lr': {'value': False},
-        'lr': {'value': 0.005},  # LR for Projection and Backbone
+        'train_backbone': {'value': True},
+        'cos_lr': {'value': True},
+        'lr': {'value': 0.0001},  # LR for Projection and Backbone
         'pre_proj': {'value': 1},  # Number of Layers for Projection
         'proj_layer_type': {'value': 0},  # if > 1 then relu is added to all but the last layer of Projection
         'mix_noise': {'value': 1},
