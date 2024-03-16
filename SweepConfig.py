@@ -16,18 +16,18 @@ sweep_configuration = {
         'meta_epochs': {'value': 50},
         'aed_meta_epochs': {'value': 5},  # used for cos_lr scheduler, but needs to be an int allways
         'gan_epochs': {'value': 5},
-        'noise_std': {'value': 0.015},
+        'noise_std': {'values': [0.015, 0.025]},
         'dsc_layers': {'value': 2},
         'dsc_hidden': {'value': 512},
-        'dsc_margin': {'value': .3},
+        'dsc_margin': {'values': [.3, .5]},
         'dsc_lr': {'value': 0.0002},  # LR for Discriminator
         'pre_proj_lr': {'value': 0.0001},
         'auto_noise': {'value': 0},  # scheint ein sinnloser Parameter zu sein
-        'train_backbone': {'value': True},
-        'cos_lr': {'value': True},
+        'train_backbone': {'value': False},
+        'cos_lr': {'value': False},
         'lr': {'value': 0.0001},  # LR for Projection and Backbone
-        'pre_proj': {'value': 1},  # Number of Layers for Projection
-        'proj_layer_type': {'value': 0},  # if > 1 then relu is added to all but the last layer of Projection
+        'pre_proj': {'values': [1, 2]},  # Number of Layers for Projection
+        'proj_layer_type': {'values': [0, 999]},  # if > 1 then relu is added to all but the last layer of Projection
         'mix_noise': {'value': 1},
     }
 }
