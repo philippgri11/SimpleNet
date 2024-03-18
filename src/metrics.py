@@ -28,7 +28,7 @@ def compute_imagewise_retrieval_metrics(
     # confusion_matrix = metrics.ConfusionMatrixDisplay.from_predictions(anomaly_ground_truth_labels, preds,
     #                                                                    display_labels=["Healthy", "Cancer"]).im_
     confusion_matrix = metrics.ConfusionMatrixDisplay.from_predictions(anomaly_ground_truth_labels, preds,
-                                                                       display_labels=["Healthy", "Cancer"]).confusion_matrix
+                                                                       display_labels=["Healthy", "Cancer"]).im_
     accuracy = metrics.accuracy_score(anomaly_ground_truth_labels, preds)
     precision = metrics.precision_score(anomaly_ground_truth_labels, preds)
     recall = metrics.recall_score(anomaly_ground_truth_labels, preds)
