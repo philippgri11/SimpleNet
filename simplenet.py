@@ -364,6 +364,8 @@ class SimpleNet(torch.nn.Module):
         accuracy = metrics_["accuracy"]
         precision = metrics_["precision"]
         recall = metrics_["recall"]
+        fbeta = metrics_["fbeta"]
+
 
         if len(masks_gt) > 0:
             segmentations = np.array(segmentations)
@@ -394,7 +396,7 @@ class SimpleNet(torch.nn.Module):
             full_pixel_auroc = -1
             pro = -1
 
-        return auroc, full_pixel_auroc, pro, f1, mse, confusion_matrix, accuracy, precision, recall
+        return auroc, full_pixel_auroc, pro, f1, mse, confusion_matrix, accuracy, precision, recall, fbeta
 
     def train(self, training_data, test_data):
 
@@ -483,7 +485,7 @@ class SimpleNet(torch.nn.Module):
                 )
 
             evaluations = self._evaluate(scores, segmentations, labels_gt, masks_gt)
-            auroc, full_pixel_auroc, pro, f1, mse, confusion_matrix, accuracy, precision, recall = evaluations
+            auroc, full_pixel_auroc, pro, f1, mse, confusion_matrix, accuracy, precision, recall, fbeta = evaluations
             del scores, segmentations, labels_gt, masks_gt
             if self.run:
                 self.run.log(
@@ -494,7 +496,8 @@ class SimpleNet(torch.nn.Module):
                         "Metrics/Confusion Matrix": wandb.Image(confusion_matrix),
                         "Metrics/Accuracy": accuracy,
                         "Metrics/Precision": precision,
-                        "Metrics/Recall": recall
+                        "Metrics/Recall": recall,
+                        "Metrics/FBeta": fbeta
                     }, commit=True
                 )
 

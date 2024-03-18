@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 from sklearn import metrics
 
+
 def compute_imagewise_retrieval_metrics(
         anomaly_prediction_weights, anomaly_ground_truth_labels, th=0.5
 ):
@@ -16,40 +17,56 @@ def compute_imagewise_retrieval_metrics(
         anomaly_ground_truth_labels: [np.array or list] [N] Binary labels - 1
                                     if image is an anomaly, 0 if not.
     """
-    # fpr, tpr, thresholds = metrics.roc_curve(
-    #     anomaly_ground_truth_labels, anomaly_prediction_weights
-    # )
-    fpr, tpr, thresholds = -1, -1, []
-
     preds = np.where(np.array(anomaly_prediction_weights) >= th, 1, 0)
 
     f1_score = metrics.f1_score(anomaly_ground_truth_labels, preds)
+    fbeta = pfbeta(anomaly_ground_truth_labels, anomaly_prediction_weights, th)
     mse = metrics.mean_squared_error(anomaly_ground_truth_labels, preds)
     auroc = metrics.roc_auc_score(
         anomaly_ground_truth_labels, anomaly_prediction_weights
     )
-    confusion_matrix = metrics.ConfusionMatrixDisplay.from_predictions(anomaly_ground_truth_labels, preds, display_labels=["Healthy", "Cancer"]).im_
+    # confusion_matrix = metrics.ConfusionMatrixDisplay.from_predictions(anomaly_ground_truth_labels, preds,
+    #                                                                    display_labels=["Healthy", "Cancer"]).im_
+    confusion_matrix = metrics.ConfusionMatrixDisplay.from_predictions(anomaly_ground_truth_labels, preds,
+                                                                       display_labels=["Healthy", "Cancer"]).confusion_matrix
     accuracy = metrics.accuracy_score(anomaly_ground_truth_labels, preds)
     precision = metrics.precision_score(anomaly_ground_truth_labels, preds)
     recall = metrics.recall_score(anomaly_ground_truth_labels, preds)
 
-    # precision, recall, _ = metrics.precision_recall_curve(
-    #     anomaly_ground_truth_labels, anomaly_prediction_weights
-    # )
-    # auc_pr = metrics.auc(recall, precision)
-
     return {
         "auroc": auroc,
-        "fpr": fpr,
-        "tpr": tpr,
-        "threshold": thresholds,
+        "threshold": th,
         "f1_score": f1_score,
         "mse": mse,
         "confusion_matrix": confusion_matrix,
         "accuracy": accuracy,
         "precision": precision,
-        "recall": recall
+        "recall": recall,
+        "fbeta": fbeta
     }
+
+
+def pfbeta(labels, predictions, beta):
+    y_true_count = 0
+    ctp = 0
+    cfp = 0
+
+    for idx in range(len(labels)):
+        prediction = min(max(predictions[idx], 0), 1)
+        if (labels[idx]):
+            y_true_count += 1
+            ctp += prediction
+        else:
+            cfp += prediction
+
+    beta_squared = beta * beta
+    c_precision = ctp / (ctp + cfp)
+    c_recall = ctp / y_true_count
+    if c_precision > 0 and c_recall > 0:
+        result = (1 + beta_squared) * (c_precision * c_recall) / (beta_squared * c_precision + c_recall)
+        return result
+    else:
+        return 0
 
 
 def compute_pixelwise_retrieval_metrics(anomaly_segmentations, ground_truth_masks):

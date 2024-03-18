@@ -7,7 +7,7 @@ sweep_configuration = {
     'method': 'grid',
     'name': 'HyperparameterSearch' + datetime.now().strftime("%d/%m/%Y, %H:%M"),
     'parameters': {
-        'backbone': {'value': dataclasses.asdict(BackboneSetting('wideresnet50', ['layer1', 'layer2']))},
+        'backbone': {'value': dataclasses.asdict(BackboneSetting('wideresnet50', ['layer2', 'layer3']))},
         'batch_size': {'value': 16},
         'pretrain_embed_dimension': {'value': 768},
         'projection_dimension': {'value': 768},
