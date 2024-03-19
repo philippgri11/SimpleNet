@@ -444,10 +444,11 @@ class SimpleNet(torch.nn.Module):
                 heatmaps = np.array(segmentations)
                 cancer_ims = []
                 healthy_ims = []
-                for batch in test_data:
+                for batch_idx, batch in enumerate(test_data):
                     images = batch["image"]
                     isCancer = batch["is_anomaly"]
-                    for i in range(images.shape[0]):  # Gehe durch jedes Bild im Batch
+                    batch_size = images.shape[0]
+                    for i in range(batch_size):  # Gehe durch jedes Bild im Batch
                         image = images[i].cpu().numpy().transpose((1,2,0))
                         im_class = int(isCancer[i].cpu())
                         if len(cancer_ims) >= 8 and im_class:
@@ -457,7 +458,7 @@ class SimpleNet(torch.nn.Module):
                         if len(cancer_ims) >= 8 and len(healthy_ims) >= 8:
                             break
 
-                        heatmap = heatmaps[i]
+                        heatmap = heatmaps[batch_idx*batch_size+i]
                         normed_heatmap = (heatmap - np.min(heatmap)) / (np.max(heatmap) - np.min(heatmap))
                         colored_heatmap = plt.get_cmap('jet')(normed_heatmap)[:, :, :3]
                         overlayed_image = colored_heatmap * 0.5 + image * 0.5

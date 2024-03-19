@@ -24,13 +24,13 @@ CANCER_CNT = 1158
 
 
 def train(config=None):
-    with wandb.init(config=config, group='VGG19') as run:
+    with wandb.init(config=config, group='FewImagesNewRun') as run:
         config = wandb.config
 
         train_ds = BreastCancerDataset(
             img_dir=img_dir,
             meta_data_csv_path=csv_file,
-            num_images=(512, 0, 0, 0),
+            num_images=(64, 0, 0, 0),
             resize=config.image_size[1:],
         )
 
@@ -38,7 +38,7 @@ def train(config=None):
             img_dir=img_dir,
             meta_data_csv_path=csv_file,
             split=DatasetSplit.VAL,
-            num_images=(64, 512, 16, 0),
+            num_images=(16, 64, 4, 0),
             resize=config.image_size[1:]
         )
 
