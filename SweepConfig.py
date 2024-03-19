@@ -16,7 +16,7 @@ sweep_configuration = {
         'meta_epochs': {'value': 50},
         'aed_meta_epochs': {'value': 5},  # used for cos_lr scheduler, but needs to be an int allways
         'gan_epochs': {'value': 5},
-        'noise_std': {'values': [0.015, 0.1]},
+        'noise_std': {'value': 0.1},
         'dsc_layers': {'value': 2},
         'dsc_hidden': {'value': 1024},
         'dsc_margin': {'value': .3},
