@@ -8,7 +8,7 @@ sweep_configuration = {
     'name': 'HyperparameterSearch' + datetime.now().strftime("%d/%m/%Y, %H:%M"),
     'parameters': {
         'backbone': {'value': dataclasses.asdict(BackboneSetting('wideresnet50', ['layer2', 'layer3']))},
-        'batch_size': {'value': 16},
+        'batch_size': {'values': [4, 8, 16]},
         'pretrain_embed_dimension': {'value': 786},
         'projection_dimension': {'value': 786},
         'image_size': {'value': (3, 224, 224)},
