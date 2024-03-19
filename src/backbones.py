@@ -1,6 +1,6 @@
 import timm  # noqa
 import torchvision.models as models  # noqa
-from torchvision.models import Wide_ResNet50_2_Weights, ResNet50_Weights
+from torchvision.models import Wide_ResNet50_2_Weights, ResNet50_Weights, VGG19_Weights
 
 def load_ref_wrn50():
     
@@ -28,7 +28,7 @@ _BACKBONES = {
     "resnetv2_152_384": 'timm.create_model("resnetv2_152x2_bit_teacher_384", pretrained=True)',
     "resnetv2_101": 'timm.create_model("resnetv2_101", pretrained=True)',
     "vgg11": "models.vgg11(pretrained=True)",
-    "vgg19": "models.vgg19(pretrained=True)",
+    "vgg19": "models.vgg19(weights=VGG19_Weights.DEFAULT)",
     "vgg19_bn": "models.vgg19_bn(pretrained=True)",
     "wideresnet50": "models.wide_resnet50_2(weights=Wide_ResNet50_2_Weights.DEFAULT)",
     "ref_wideresnet50": "load_ref_wrn50()",

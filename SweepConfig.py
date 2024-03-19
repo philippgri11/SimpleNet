@@ -7,12 +7,12 @@ sweep_configuration = {
     'method': 'grid',
     'name': 'HyperparameterSearch' + datetime.now().strftime("%d/%m/%Y, %H:%M"),
     'parameters': {
-        'backbone': {'value': dataclasses.asdict(BackboneSetting('wideresnet50', ['layer2', 'layer3']))},
+        'backbone': {'value': dataclasses.asdict(BackboneSetting('vgg19', ['features.2', 'features.5']))},
         'batch_size': {'value': 8},
-        'pretrain_embed_dimension': {'value': 786},
-        'projection_dimension': {'value': 786},
+        'pretrain_embed_dimension': {'value': 1600},
+        'projection_dimension': {'value': 1600},
         'image_size': {'value': (3, 224, 224)},
-        'patch_size': {'value': 3},
+        'patch_size': {'value': 5},
         'meta_epochs': {'value': 50},
         'aed_meta_epochs': {'value': 5},  # used for cos_lr scheduler, but needs to be an int allways
         'gan_epochs': {'value': 5},
