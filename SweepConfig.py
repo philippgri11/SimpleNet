@@ -7,19 +7,17 @@ sweep_configuration = {
     'method': 'grid',
     'name': 'HyperparameterSearch' + datetime.now().strftime("%d/%m/%Y, %H:%M"),
     'parameters': {
-        'backbone': {'values': [dataclasses.asdict(BackboneSetting('resnet50', ['layer1', 'layer2'])),
-                                dataclasses.asdict(BackboneSetting('wideresnet50', ['layer1', 'layer2'])),
-                                dataclasses.asdict(BackboneSetting('wideresnet50', ['layer2', 'layer3']))]},
+        'backbone': {'value': dataclasses.asdict(BackboneSetting('wideresnet50', ['layer2', 'layer3']))},
         'batch_size': {'value': 8},
-        'pretrain_embed_dimension': {'value': 1536},
-        'projection_dimension': {'value': 1536},
+        'pretrain_embed_dimension': {'value': 786},
+        'projection_dimension': {'value': 786},
         'image_size': {'value': (3, 224, 224)},
         'patch_size': {'value': 3},
         'meta_epochs': {'value': 50},
         'aed_meta_epochs': {'value': 5},  # used for cos_lr scheduler, but needs to be an int allways
         'gan_epochs': {'value': 5},
         'noise_std': {'values': [0.015, 0.1]},
-        'dsc_layers': {'values': [2, 3]},
+        'dsc_layers': {'value': 2},
         'dsc_hidden': {'value': 1024},
         'dsc_margin': {'value': .3},
         'dsc_lr': {'value': 0.0002},  # LR for Discriminator
