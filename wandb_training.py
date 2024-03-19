@@ -82,9 +82,9 @@ def train(config=None):
 
         run.watch(net)
         net.train(train_loader, val_loader)
-    run.unwatch(net)
-    del train_loader, val_loader, backbone, net
-    torch.cuda.empty_cache()
+        run.unwatch(net)
+        del train_loader, val_loader, backbone, net
+        torch.cuda.empty_cache()
 
 
 img_dir = os.environ['IMAGE_DIR']
