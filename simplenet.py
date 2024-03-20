@@ -442,6 +442,7 @@ class SimpleNet(torch.nn.Module):
 
             if self.log_scores:
                 heatmaps = np.array(segmentations)
+                heatmaps = (heatmaps - np.min(heatmaps)) / (np.max(heatmaps) - np.min(heatmaps))
                 cancer_ims = []
                 healthy_ims = []
                 for batch_idx, batch in enumerate(test_data):
@@ -459,8 +460,7 @@ class SimpleNet(torch.nn.Module):
                             break
 
                         heatmap = heatmaps[batch_idx*batch_size+i]
-                        normed_heatmap = (heatmap - np.min(heatmap)) / (np.max(heatmap) - np.min(heatmap))
-                        colored_heatmap = plt.get_cmap('jet')(normed_heatmap)[:, :, :3]
+                        colored_heatmap = plt.get_cmap('jet')(heatmap)[:, :, :3]
                         overlayed_image = colored_heatmap * 0.5 + image * 0.5
                         overlayed_image = np.clip(overlayed_image, 0, 1)
                         if im_class:
