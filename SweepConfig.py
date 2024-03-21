@@ -9,8 +9,8 @@ sweep_configuration = {
     'parameters': {
         'backbone': {'value': dataclasses.asdict(BackboneSetting('wideresnet50', ['layer2', 'layer3']))},
         'batch_size': {'value': 16},
-        'pretrain_embed_dimension': {'value': 768},
-        'projection_dimension': {'value': 768},
+        'pretrain_embed_dimension': {'value': 1024},
+        'projection_dimension': {'value': 1024},
         'image_size': {'value': (3, 224, 224)},
         'patch_size': {'value': 3},
         'meta_epochs': {'value': 50},
@@ -29,10 +29,8 @@ sweep_configuration = {
         'pre_proj': {'value': 1},  # Number of Layers for Projection
         'proj_layer_type': {'value': 0},  # if > 1 then relu is added to all but the last layer of Projection
         'mix_noise': {'value': 1},
-        'num_train_images': {'values': [4, 128, 256, 512]},
+        'num_train_images': {'value': 128},
         'num_val_images': {'values': [
-            {'h': 4, 'c': 4},
-            {'h': 16, 'c': 4},
             {'h': 64, 'c': 64}
         ]}
     }
