@@ -73,6 +73,7 @@ class BreastCancerDataset(Dataset):
             transforms.ColorJitter(brightness=brightness_range, contrast=contrast_range),
             transforms.Lambda(lambda x: x + torch.rand_like(x) * noise_std),
             transforms.Lambda(lambda x: torch.clip(x, 0, 1)),
+            transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
         ]
         self.transform_img = transforms.Compose(self.transform_img)
 
