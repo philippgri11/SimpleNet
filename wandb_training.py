@@ -24,7 +24,7 @@ CANCER_CNT = 1158
 
 
 def train(config=None):
-    with wandb.init(config=config, group='Norm') as run:
+    with wandb.init(config=config, group='Philipps1024Run') as run:
         config = wandb.config
 
         train_ds = BreastCancerDataset(

@@ -29,7 +29,7 @@ sweep_configuration = {
         'pre_proj': {'value': 1},  # Number of Layers for Projection
         'proj_layer_type': {'value': 0},  # if > 1 then relu is added to all but the last layer of Projection
         'mix_noise': {'value': 1},
-        'num_train_images': {'values': [4, 16, 64, 128, 512]},
+        'num_train_images': {'value': 1024},
         'num_val_images': {'value': {'h': 64, 'c': 64}}
     }
 }
